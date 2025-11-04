@@ -813,25 +813,25 @@ async function viewUser(userId) {
     showToast('正在載入用戶詳細資訊...', 'info');
     
     try {
-        // 獲取用戶訂單記錄
-        const ordersResponse = await adminFetch(`${API_BASE_URL}/user/orders/${userId}`);
-        let orders = [];
-        if (ordersResponse.ok) {
-            const ordersData = await ordersResponse.json();
-            orders = ordersData.orders || [];
-        }
+        // 使用管理員端點獲取完整用戶資料（包含訂單和授權資訊）
+        const response = await adminFetch(`${API_BASE_URL}/admin/user/${userId}/data`);
+        const userData = await response.json();
         
-        // 獲取用戶授權資訊
-        const licenseResponse = await adminFetch(`${API_BASE_URL}/user/license/${userId}`);
-        let licenseData = null;
-        if (licenseResponse.ok) {
-            licenseData = await licenseResponse.json();
-        }
+        // 從回應中提取資料
+        const orders = userData.orders || [];
+        const licenseData = userData.license;
+        const userInfo = userData.user_info || {};
         
         // 構建詳情內容
         let content = `<div style="padding: 20px;">`;
         content += `<h3 style="margin-bottom: 16px;">用戶詳情</h3>`;
         content += `<p><strong>用戶ID：</strong>${userId}</p>`;
+        if (userInfo.email) {
+            content += `<p><strong>Email：</strong>${userInfo.email}</p>`;
+        }
+        if (userInfo.name) {
+            content += `<p><strong>姓名：</strong>${userInfo.name}</p>`;
+        }
         
         // 授權資訊
         if (licenseData && licenseData.tier !== 'none') {
