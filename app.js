@@ -18,14 +18,82 @@ function setAdminToken(token) {
     }
 }
 
+// 檢查 token 是否過期
+function isTokenExpired(token) {
+    if (!token) return true;
+    
+    try {
+        // JWT token 格式：header.payload.signature
+        const parts = token.split('.');
+        if (parts.length !== 3) return true;
+        
+        // 解碼 payload（base64url）
+        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        
+        // 檢查過期時間
+        if (payload.exp) {
+            const now = Math.floor(Date.now() / 1000);
+            return payload.exp < now;
+        }
+        
+        return false;
+    } catch (e) {
+        console.error('檢查 token 過期時出錯:', e);
+        return true; // 如果無法解析，視為過期
+    }
+}
+
+// 檢查 token 是否即將過期（5分鐘內）
+function isTokenExpiringSoon(token) {
+    if (!token) return true;
+    
+    try {
+        const parts = token.split('.');
+        if (parts.length !== 3) return true;
+        
+        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        
+        if (payload.exp) {
+            const now = Math.floor(Date.now() / 1000);
+            const fiveMinutes = 5 * 60; // 5分鐘
+            return payload.exp < (now + fiveMinutes);
+        }
+        
+        return false;
+    } catch (e) {
+        return true;
+    }
+}
+
+// 強制登出並清除所有狀態
+function forceLogout(reason = '登入已過期，請重新登入') {
+    // 清除 token
+    setAdminToken('');
+    
+    // 清除任何其他相關的 localStorage 數據（如果需要）
+    // localStorage.removeItem('其他相關數據');
+    
+    // 顯示登入提示，並顯示過期訊息
+    showLoginRequired(reason);
+    
+    // 停止所有正在進行的請求（可選）
+    // 可以實作一個請求取消機制
+}
+
 // 統一的 fetch 函數，自動帶上 Authorization header
 async function adminFetch(url, options = {}) {
     const token = getAdminToken();
     
+    // 檢查 token 是否存在
     if (!token) {
-        // 如果沒有 token，顯示登入提示
-        showLoginRequired();
+        forceLogout('請先登入');
         throw new Error('需要登入');
+    }
+    
+    // 檢查 token 是否過期
+    if (isTokenExpired(token)) {
+        forceLogout('登入已過期，請重新登入');
+        throw new Error('Token 已過期');
     }
     
     const headers = {
@@ -33,22 +101,49 @@ async function adminFetch(url, options = {}) {
         'Authorization': `Bearer ${token}`
     };
     
-    const response = await fetch(url, { ...options, headers });
-    
-    // 如果收到 401 或 403，清除 token 並顯示登入提示
-    if (response.status === 401 || response.status === 403) {
-        setAdminToken('');
-        showLoginRequired();
-        throw new Error('認證失敗，請重新登入');
+    try {
+        const response = await fetch(url, { ...options, headers });
+        
+        // 如果收到 401 或 403，清除 token 並顯示登入提示
+        if (response.status === 401 || response.status === 403) {
+            let errorMessage = '認證失敗，請重新登入';
+            
+            // 嘗試從回應中獲取錯誤訊息
+            try {
+                const errorData = await response.clone().json();
+                if (errorData.detail) {
+                    errorMessage = errorData.detail;
+                }
+            } catch (e) {
+                // 如果無法解析 JSON，使用預設訊息
+            }
+            
+            forceLogout(errorMessage);
+            throw new Error(errorMessage);
+        }
+        
+        return response;
+    } catch (error) {
+        // 如果是網路錯誤，不要清除 token（可能是暫時的網路問題）
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+            throw error;
+        }
+        
+        // 其他錯誤（包括我們自己拋出的）繼續傳播
+        throw error;
     }
-    
-    return response;
 }
 
 // 顯示登入提示
-function showLoginRequired() {
+function showLoginRequired(message = '請選擇登入方式') {
     // 檢查是否已經顯示登入提示
     if (document.getElementById('login-required-modal')) {
+        // 如果已經顯示，更新訊息
+        const existingMessage = document.querySelector('#login-required-modal .login-message');
+        if (existingMessage && message !== '請選擇登入方式') {
+            existingMessage.textContent = message;
+            existingMessage.style.color = '#ef4444';
+        }
         return;
     }
     
@@ -70,7 +165,9 @@ function showLoginRequired() {
     modal.innerHTML = `
         <div style="background: white; border-radius: 12px; padding: 2rem; max-width: 500px; width: 90%;">
             <h2 style="margin: 0 0 1rem 0; color: #1f2937;">🔐 管理員登入</h2>
-            <p style="margin: 0 0 1.5rem 0; color: #6b7280;">請選擇登入方式</p>
+            <p class="login-message" style="margin: 0 0 1.5rem 0; color: ${message.includes('過期') || message.includes('失敗') ? '#ef4444' : '#6b7280'};">
+                ${message}
+            </p>
             <div style="display: flex; gap: 1rem; flex-direction: column;">
                 <button id="admin-login-btn" style="
                     padding: 0.75rem 1.5rem;
@@ -241,7 +338,37 @@ function checkAdminAuth() {
             return;
         }
         showLoginRequired();
+        return;
     }
+    
+    // 檢查 token 是否過期
+    if (isTokenExpired(token)) {
+        forceLogout('登入已過期，請重新登入');
+        return;
+    }
+    
+    // 檢查 token 是否即將過期（提前提醒）
+    if (isTokenExpiringSoon(token)) {
+        // 可以選擇顯示一個非阻塞的提醒，但不在這裡實作
+        // 因為這可能會在每次檢查時都顯示，造成干擾
+    }
+}
+
+// 定期檢查 token 狀態（每分鐘檢查一次）
+function startTokenMonitor() {
+    setInterval(() => {
+        const token = getAdminToken();
+        if (token) {
+            // 檢查是否過期
+            if (isTokenExpired(token)) {
+                forceLogout('登入已過期，請重新登入');
+            } else if (isTokenExpiringSoon(token)) {
+                // Token 即將過期，可以顯示一個非阻塞的提醒
+                // 這裡選擇不顯示，避免干擾用戶操作
+                // 如果需要，可以在這裡顯示一個頂部橫幅提醒
+            }
+        }
+    }, 60000); // 每分鐘檢查一次
 }
 
 // ===== DOM 安全渲染工具（依據 Admin_Dashboard_DOM_Render_Fix.md） =====
@@ -275,6 +402,9 @@ async function waitFor(selector, timeout = 5000, interval = 50) {
 document.addEventListener('DOMContentLoaded', function() {
     // 檢查管理員認證
     checkAdminAuth();
+    
+    // 啟動 token 監控（每分鐘檢查一次）
+    startTokenMonitor();
     
     initializeNavigation();
     updateTime();
