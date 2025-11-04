@@ -1315,18 +1315,54 @@ async function loadLongTermMemory() {
         
         // 載入按用戶分組的記憶列表
         const response = await adminFetch(`${API_BASE_URL}/admin/long-term-memory/by-user`);
+        
+        // 檢查回應狀態
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('API 回應錯誤:', response.status, errorText);
+            showToast(`載入失敗: ${response.status}`, 'error');
+            
+            const tbody = await waitFor('#memory-table-body', 8000).catch(() => null);
+            if (tbody) {
+                setHTML(tbody, `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #ef4444;">載入失敗 (${response.status})，請檢查控制台</td></tr>`);
+            }
+            return;
+        }
+        
         const data = await response.json();
+        console.log('長期記憶 API 回應:', data); // 調試用
+        
+        // 檢查返回的數據結構
+        if (!data) {
+            console.error('API 返回空數據');
+            const tbody = await waitFor('#memory-table-body', 8000).catch(() => null);
+            if (tbody) {
+                setHTML(tbody, '<tr><td colspan="7" style="text-align: center; padding: 2rem;">API 返回空數據</td></tr>');
+            }
+            return;
+        }
+        
         const users = data.users || [];
+        console.log('用戶列表:', users); // 調試用
         
         // 顯示用戶列表
         const tbody = await waitFor('#memory-table-body', 8000).catch(() => null);
-        if (!tbody) return;
+        if (!tbody) {
+            console.error('找不到表格 tbody 元素');
+            return;
+        }
+        
         if (users.length === 0) {
             setHTML(tbody, '<tr><td colspan="7" style="text-align: center; padding: 2rem;">暫無長期記憶記錄</td></tr>');
             return;
         }
         
-        setHTML(tbody, users.map(user => `
+        setHTML(tbody, users.map(user => {
+            // 安全處理 types_list（可能為空或 null）
+            const typesList = user.types_list || '';
+            const types = typesList ? typesList.split(',').map(type => type.trim()).filter(type => type) : [];
+            
+            return `
             <tr>
                 <td>
                     <div class="user-info">
@@ -1335,33 +1371,41 @@ async function loadLongTermMemory() {
                     </div>
                 </td>
                 <td>
-                    <span class="user-id">${escapeHtml(user.user_id.substring(0, 20))}${user.user_id.length > 20 ? '...' : ''}</span>
+                    <span class="user-id">${escapeHtml(user.user_id ? (user.user_id.substring(0, 20) + (user.user_id.length > 20 ? '...' : '')) : '未知')}</span>
                 </td>
                 <td>
-                    <span class="badge">${user.total_memories}</span>
+                    <span class="badge">${user.total_memories || 0}</span>
                 </td>
                 <td>
-                    <span class="badge">${user.session_count}</span>
+                    <span class="badge">${user.session_count || 0}</span>
                 </td>
                 <td>
                     <span class="conversation-types">
-                        ${user.types_list.split(',').map(type => `<span class="conversation-type ${type.trim()}">${getConversationTypeLabel(type.trim())}</span>`).join(' ')}
+                        ${types.length > 0 ? types.map(type => `<span class="conversation-type ${type}">${getConversationTypeLabel(type)}</span>`).join(' ') : '<span class="conversation-type">未知</span>'}
                     </span>
                 </td>
                 <td>
-                    <span class="timestamp">${formatDateTime(user.first_memory)}</span>
+                    <span class="timestamp">${formatDateTime(user.first_memory || '')}</span>
                     <br>
-                    <span class="timestamp" style="color: #64748b; font-size: 0.85em;">最後: ${formatDateTime(user.last_memory)}</span>
+                    <span class="timestamp" style="color: #64748b; font-size: 0.85em;">最後: ${formatDateTime(user.last_memory || '')}</span>
                 </td>
                 <td>
-                    <button class="btn btn-sm btn-primary" onclick="viewUserMemoryDetail('${escapeHtml(user.user_id)}')">查看詳情</button>
+                    <button class="btn btn-sm btn-primary" onclick="viewUserMemoryDetail('${escapeHtml(user.user_id || '')}')">查看詳情</button>
                 </td>
             </tr>
-        `).join(''));
+        `;
+        }).join(''));
         
     } catch (error) {
         console.error('載入長期記憶失敗:', error);
-        showToast('載入長期記憶失敗', 'error');
+        console.error('錯誤詳情:', error.stack);
+        showToast(`載入長期記憶失敗: ${error.message}`, 'error');
+        
+        // 顯示錯誤信息在表格中
+        const tbody = await waitFor('#memory-table-body', 8000).catch(() => null);
+        if (tbody) {
+            setHTML(tbody, `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: #ef4444;">載入失敗: ${escapeHtml(error.message)}</td></tr>`);
+        }
     }
 }
 
