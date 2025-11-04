@@ -70,7 +70,7 @@ function showLoginRequired() {
     modal.innerHTML = `
         <div style="background: white; border-radius: 12px; padding: 2rem; max-width: 500px; width: 90%;">
             <h2 style="margin: 0 0 1rem 0; color: #1f2937;">🔐 管理員登入</h2>
-            <p style="margin: 0 0 1.5rem 0; color: #6b7280;">請使用 Google 帳號登入以使用後台管理系統</p>
+            <p style="margin: 0 0 1.5rem 0; color: #6b7280;">請選擇登入方式</p>
             <div style="display: flex; gap: 1rem; flex-direction: column;">
                 <button id="admin-login-btn" style="
                     padding: 0.75rem 1.5rem;
@@ -82,15 +82,63 @@ function showLoginRequired() {
                     font-weight: 600;
                     cursor: pointer;
                 ">使用 Google 登入</button>
-                <button id="admin-token-input-btn" style="
+                <button id="admin-password-login-btn" style="
                     padding: 0.75rem 1.5rem;
-                    background: #f3f4f6;
-                    color: #374151;
-                    border: 1px solid #d1d5db;
+                    background: #10b981;
+                    color: white;
+                    border: none;
                     border-radius: 8px;
                     font-size: 1rem;
+                    font-weight: 600;
                     cursor: pointer;
-                ">手動輸入 Token</button>
+                ">帳號密碼登入</button>
+            </div>
+            <div id="password-login-form" style="display: none; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: #374151; font-weight: 500;">帳號（Email）</label>
+                    <input type="email" id="admin-email-input" style="
+                        width: 100%;
+                        padding: 0.5rem;
+                        border: 1px solid #d1d5db;
+                        border-radius: 6px;
+                        font-size: 1rem;
+                        box-sizing: border-box;
+                    " placeholder="請輸入 Email">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: #374151; font-weight: 500;">密碼</label>
+                    <input type="password" id="admin-password-input" style="
+                        width: 100%;
+                        padding: 0.5rem;
+                        border: 1px solid #d1d5db;
+                        border-radius: 6px;
+                        font-size: 1rem;
+                        box-sizing: border-box;
+                    " placeholder="請輸入密碼">
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="admin-login-submit-btn" style="
+                        flex: 1;
+                        padding: 0.75rem 1.5rem;
+                        background: #3b82f6;
+                        color: white;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 1rem;
+                        font-weight: 600;
+                        cursor: pointer;
+                    ">登入</button>
+                    <button id="admin-login-cancel-btn" style="
+                        padding: 0.75rem 1.5rem;
+                        background: #f3f4f6;
+                        color: #374151;
+                        border: 1px solid #d1d5db;
+                        border-radius: 8px;
+                        font-size: 1rem;
+                        cursor: pointer;
+                    ">取消</button>
+                </div>
+                <div id="login-error" style="margin-top: 0.5rem; color: #ef4444; font-size: 0.875rem; display: none;"></div>
             </div>
         </div>
     `;
@@ -109,15 +157,64 @@ function showLoginRequired() {
         window.location.href = authUrl;
     };
     
-    // 手動輸入 Token 按鈕
-    document.getElementById('admin-token-input-btn').onclick = function() {
-        const token = prompt('請輸入管理員 Token：');
-        if (token && token.trim()) {
-            setAdminToken(token.trim());
-            modal.remove();
-            location.reload();
+    // 帳號密碼登入按鈕
+    document.getElementById('admin-password-login-btn').onclick = function() {
+        const form = document.getElementById('password-login-form');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    };
+    
+    // 取消按鈕
+    document.getElementById('admin-login-cancel-btn').onclick = function() {
+        document.getElementById('password-login-form').style.display = 'none';
+        document.getElementById('admin-email-input').value = '';
+        document.getElementById('admin-password-input').value = '';
+        document.getElementById('login-error').style.display = 'none';
+    };
+    
+    // 登入提交按鈕
+    document.getElementById('admin-login-submit-btn').onclick = async function() {
+        const email = document.getElementById('admin-email-input').value.trim();
+        const password = document.getElementById('admin-password-input').value.trim();
+        const errorDiv = document.getElementById('login-error');
+        
+        if (!email || !password) {
+            errorDiv.textContent = '請輸入帳號和密碼';
+            errorDiv.style.display = 'block';
+            return;
+        }
+        
+        try {
+            const response = await fetch('https://aivideobackend.zeabur.app/api/admin/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email, password })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok && data.access_token) {
+                setAdminToken(data.access_token);
+                modal.remove();
+                location.reload();
+            } else {
+                errorDiv.textContent = data.error || '登入失敗，請檢查帳號密碼';
+                errorDiv.style.display = 'block';
+            }
+        } catch (error) {
+            errorDiv.textContent = '網路錯誤，請稍後再試';
+            errorDiv.style.display = 'block';
+            console.error('登入錯誤:', error);
         }
     };
+    
+    // Enter 鍵觸發登入
+    document.getElementById('admin-password-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('admin-login-submit-btn').click();
+        }
+    });
 }
 
 // 檢查是否需要登入
