@@ -371,6 +371,17 @@ function startTokenMonitor() {
     }, 60000); // 每分鐘檢查一次
 }
 
+// 定期更新最近活動（每30秒更新一次）
+function startActivityMonitor() {
+    setInterval(() => {
+        // 只在當前頁面是概覽頁面時更新
+        const activeSection = document.querySelector('.section.active');
+        if (activeSection && activeSection.id === 'overview') {
+            loadRecentActivities();
+        }
+    }, 30000); // 每30秒更新一次
+}
+
 // ===== DOM 安全渲染工具（依據 Admin_Dashboard_DOM_Render_Fix.md） =====
 function setHTML(sel, html) {
     const el = typeof sel === 'string' ? document.querySelector(sel) : sel;
@@ -405,6 +416,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // 啟動 token 監控（每分鐘檢查一次）
     startTokenMonitor();
+    
+    // 啟動活動監控（每30秒更新一次）
+    startActivityMonitor();
     
     initializeNavigation();
     updateTime();
@@ -499,18 +513,23 @@ function loadSectionData(section) {
     }
 }
 
-// 更新時間
+// 更新時間（台灣時區 GMT+8）
 function updateTime() {
     const now = new Date();
     const timeString = now.toLocaleString('zh-TW', {
+        timeZone: 'Asia/Taipei',
         year: 'numeric',
         month: '2-digit',
         day: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit'
+        second: '2-digit',
+        hour12: false
     });
-    document.getElementById('current-time').textContent = timeString;
+    const timeElement = document.getElementById('current-time');
+    if (timeElement) {
+        timeElement.textContent = timeString;
+    }
 }
 
 // 重新整理數據
@@ -672,18 +691,55 @@ async function loadRecentActivities() {
 function calculateTimeAgo(timeString) {
     if (!timeString) return '未知時間';
     
-    const now = new Date();
-    const time = new Date(timeString);
-    const diff = now - time;
-    
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-    
-    if (days > 0) return `${days} 天前`;
-    if (hours > 0) return `${hours} 小時前`;
-    if (minutes > 0) return `${minutes} 分鐘前`;
-    return '剛剛';
+    try {
+        // 確保使用台灣時區進行時間計算
+        const time = new Date(timeString);
+        const now = new Date();
+        
+        // 轉換為台灣時區的 Unix 時間戳
+        const taiwanTime = new Date(time.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+        const taiwanNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Taipei' }));
+        
+        const diff = taiwanNow - taiwanTime;
+        
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        
+        if (days > 0) return `${days} 天前`;
+        if (hours > 0) return `${hours} 小時前`;
+        if (minutes > 0) return `${minutes} 分鐘前`;
+        return '剛剛';
+    } catch (e) {
+        console.error('計算時間差錯誤:', e);
+        return '時間格式錯誤';
+    }
+}
+
+// 格式化台灣時區時間
+function formatTaiwanTime(dateString) {
+    if (!dateString) return '-';
+    try {
+        const date = new Date(dateString);
+        return date.toLocaleString('zh-TW', {
+            timeZone: 'Asia/Taipei',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        });
+    } catch (e) {
+        console.error('格式化時間錯誤:', e);
+        return dateString;
+    }
+}
+
+// 格式化日期時間（用於表格顯示）
+function formatDateTime(dateString) {
+    return formatTaiwanTime(dateString);
 }
 
 // ===== 用戶管理 =====
@@ -1677,35 +1733,26 @@ async function loadAnalytics() {
 }
 
 // ===== 工具函數 =====
+// 格式化日期（台灣時區）
 function formatDate(dateString) {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleString('zh-TW', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-// 與前端一致的日期時間格式化（含時區處理與容錯）
-function formatDateTime(dateString) {
     if (!dateString) return '-';
     try {
         const date = new Date(dateString);
-        if (isNaN(date.getTime())) return '-';
-        return date.toLocaleString('zh-TW', {
+        return date.toLocaleDateString('zh-TW', {
+            timeZone: 'Asia/Taipei',
             year: 'numeric',
             month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
+            day: '2-digit'
         });
-    } catch (_) {
-        return '-';
+    } catch (e) {
+        console.error('格式化日期錯誤:', e);
+        return dateString;
     }
+}
+
+// 與前端一致的日期時間格式化（含時區處理與容錯）- 已更新為使用 formatTaiwanTime
+function formatDateTime(dateString) {
+    return formatTaiwanTime(dateString);
 }
 
 // 手機版側邊欄控制
