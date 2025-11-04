@@ -4,6 +4,149 @@ const API_BASE_URL = 'https://aivideobackend.zeabur.app/api';
 // 全域變數
 let charts = {};
 
+// ===== 管理員認證機制 =====
+// 從 localStorage 讀取管理員 token
+function getAdminToken() {
+    return localStorage.getItem('adminToken') || '';
+}
+
+function setAdminToken(token) {
+    if (token) {
+        localStorage.setItem('adminToken', token);
+    } else {
+        localStorage.removeItem('adminToken');
+    }
+}
+
+// 統一的 fetch 函數，自動帶上 Authorization header
+async function adminFetch(url, options = {}) {
+    const token = getAdminToken();
+    
+    if (!token) {
+        // 如果沒有 token，顯示登入提示
+        showLoginRequired();
+        throw new Error('需要登入');
+    }
+    
+    const headers = {
+        ...options.headers,
+        'Authorization': `Bearer ${token}`
+    };
+    
+    const response = await fetch(url, { ...options, headers });
+    
+    // 如果收到 401 或 403，清除 token 並顯示登入提示
+    if (response.status === 401 || response.status === 403) {
+        setAdminToken('');
+        showLoginRequired();
+        throw new Error('認證失敗，請重新登入');
+    }
+    
+    return response;
+}
+
+// 顯示登入提示
+function showLoginRequired() {
+    // 檢查是否已經顯示登入提示
+    if (document.getElementById('login-required-modal')) {
+        return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.id = 'login-required-modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+    `;
+    
+    modal.innerHTML = `
+        <div style="background: white; border-radius: 12px; padding: 2rem; max-width: 500px; width: 90%;">
+            <h2 style="margin: 0 0 1rem 0; color: #1f2937;">🔐 管理員登入</h2>
+            <p style="margin: 0 0 1.5rem 0; color: #6b7280;">請使用 Google 帳號登入以使用後台管理系統</p>
+            <div style="display: flex; gap: 1rem; flex-direction: column;">
+                <button id="admin-login-btn" style="
+                    padding: 0.75rem 1.5rem;
+                    background: #3b82f6;
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                ">使用 Google 登入</button>
+                <button id="admin-token-input-btn" style="
+                    padding: 0.75rem 1.5rem;
+                    background: #f3f4f6;
+                    color: #374151;
+                    border: 1px solid #d1d5db;
+                    border-radius: 8px;
+                    font-size: 1rem;
+                    cursor: pointer;
+                ">手動輸入 Token</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Google 登入按鈕
+    document.getElementById('admin-login-btn').onclick = function() {
+        // 使用與主前端相同的 Google OAuth 流程
+        const backendUrl = 'https://aivideobackend.zeabur.app';
+        // 使用當前頁面作為 redirect_uri，並在 URL 參數中標記為 admin
+        const redirectUri = encodeURIComponent(window.location.origin + window.location.pathname + '?admin_login=true');
+        const authUrl = `${backendUrl}/api/auth/google?redirect_uri=${redirectUri}`;
+        
+        // 直接跳轉到 Google OAuth 頁面
+        window.location.href = authUrl;
+    };
+    
+    // 手動輸入 Token 按鈕
+    document.getElementById('admin-token-input-btn').onclick = function() {
+        const token = prompt('請輸入管理員 Token：');
+        if (token && token.trim()) {
+            setAdminToken(token.trim());
+            modal.remove();
+            location.reload();
+        }
+    };
+}
+
+// 檢查是否需要登入
+function checkAdminAuth() {
+    // 檢查 URL 參數中是否有 token（來自 OAuth callback）
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenFromUrl = urlParams.get('token') || urlParams.get('access_token');
+    const adminLogin = urlParams.get('admin_login');
+    
+    if (tokenFromUrl) {
+        setAdminToken(tokenFromUrl);
+        // 清除 URL 參數並重新載入
+        window.history.replaceState({}, document.title, window.location.pathname);
+        location.reload();
+        return;
+    }
+    
+    // 檢查是否有儲存的 token
+    const token = getAdminToken();
+    if (!token) {
+        // 如果 URL 中有 admin_login 參數但沒有 token，可能是正在進行 OAuth 流程
+        if (adminLogin) {
+            // 等待 OAuth callback，不要顯示登入提示
+            return;
+        }
+        showLoginRequired();
+    }
+}
+
 // ===== DOM 安全渲染工具（依據 Admin_Dashboard_DOM_Render_Fix.md） =====
 function setHTML(sel, html) {
     const el = typeof sel === 'string' ? document.querySelector(sel) : sel;
@@ -33,6 +176,9 @@ async function waitFor(selector, timeout = 5000, interval = 50) {
 
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
+    // 檢查管理員認證
+    checkAdminAuth();
+    
     initializeNavigation();
     updateTime();
     setInterval(updateTime, 1000);
@@ -175,7 +321,7 @@ function showToast(message, type = 'info') {
 async function loadOverview() {
     try {
         // 載入統計數據
-        const statsResponse = await fetch(`${API_BASE_URL}/admin/statistics`);
+        const statsResponse = await adminFetch(`${API_BASE_URL}/admin/statistics`);
         const stats = await statsResponse.json();
         
         document.getElementById('total-users').textContent = stats.total_users || 0;
@@ -195,7 +341,7 @@ async function loadOverview() {
 async function loadCharts(stats) {
     try {
         // 調用 API 獲取模式統計
-        const response = await fetch(`${API_BASE_URL}/admin/mode-statistics`);
+        const response = await adminFetch(`${API_BASE_URL}/admin/mode-statistics`);
         const modeData = await response.json();
         
         // 用戶增長趨勢圖 - 暫時使用統計數據替代（需要 API 支援）
@@ -260,7 +406,7 @@ async function loadCharts(stats) {
 async function loadRecentActivities() {
     try {
         // 調用真實 API
-        const response = await fetch(`${API_BASE_URL}/admin/user-activities`);
+        const response = await adminFetch(`${API_BASE_URL}/admin/user-activities`);
         const data = await response.json();
         const activities = data.activities || [];
         
@@ -316,7 +462,7 @@ function calculateTimeAgo(timeString) {
 // ===== 用戶管理 =====
 async function loadUsers() {
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/users`);
+        const response = await adminFetch(`${API_BASE_URL}/admin/users`);
         const data = await response.json();
         
         // 檢測是否為手機版
@@ -441,7 +587,7 @@ async function viewUser(userId) {
     
     try {
         // 獲取用戶訂單記錄
-        const ordersResponse = await fetch(`${API_BASE_URL}/user/orders/${userId}`);
+        const ordersResponse = await adminFetch(`${API_BASE_URL}/user/orders/${userId}`);
         let orders = [];
         if (ordersResponse.ok) {
             const ordersData = await ordersResponse.json();
@@ -449,7 +595,7 @@ async function viewUser(userId) {
         }
         
         // 獲取用戶授權資訊
-        const licenseResponse = await fetch(`${API_BASE_URL}/user/license/${userId}`);
+        const licenseResponse = await adminFetch(`${API_BASE_URL}/user/license/${userId}`);
         let licenseData = null;
         if (licenseResponse.ok) {
             licenseData = await licenseResponse.json();
@@ -588,7 +734,7 @@ function showUserDetailModal(content) {
 async function loadModes() {
     try {
         // 調用真實 API
-        const response = await fetch(`${API_BASE_URL}/admin/mode-statistics`);
+        const response = await adminFetch(`${API_BASE_URL}/admin/mode-statistics`);
         const data = await response.json();
         
         // 更新模式統計數據
@@ -665,7 +811,7 @@ async function loadConversations() {
         }
         
         // 直接獲取所有對話記錄
-        const response = await fetch(`${API_BASE_URL}/admin/conversations`);
+        const response = await adminFetch(`${API_BASE_URL}/admin/conversations`);
         const data = await response.json();
         const allConversations = data.conversations || [];
         
@@ -887,7 +1033,7 @@ async function loadLongTermMemory() {
         await loadMemoryStats();
         
         // 載入記憶列表
-        const response = await fetch(`${API_BASE_URL}/admin/long-term-memory${filter !== 'all' ? `?conversation_type=${filter}` : ''}`);
+        const response = await adminFetch(`${API_BASE_URL}/admin/long-term-memory${filter !== 'all' ? `?conversation_type=${filter}` : ''}`);
         const data = await response.json();
         const memories = data.memories || [];
         
@@ -943,7 +1089,7 @@ async function loadLongTermMemory() {
 
 async function loadMemoryStats() {
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/memory-stats`);
+        const response = await adminFetch(`${API_BASE_URL}/admin/memory-stats`);
         const data = await response.json();
         
         document.getElementById('total-memories').textContent = data.total_memories || 0;
@@ -970,7 +1116,7 @@ function getConversationTypeLabel(type) {
 function viewMemoryDetail(memoryId) {
     (async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/admin/long-term-memory/${memoryId}`);
+            const res = await adminFetch(`${API_BASE_URL}/admin/long-term-memory/${memoryId}`);
             if (!res.ok) {
                 showToast('載入記憶詳情失敗', 'error');
                 return;
@@ -998,7 +1144,7 @@ function deleteMemory(memoryId) {
     if (!confirm('確定要刪除這筆記憶記錄嗎？')) return;
     (async () => {
         try {
-            const res = await fetch(`${API_BASE_URL}/admin/long-term-memory/${memoryId}`, { method: 'DELETE' });
+            const res = await adminFetch(`${API_BASE_URL}/admin/long-term-memory/${memoryId}`, { method: 'DELETE' });
             if (!res.ok) {
                 const err = await res.json().catch(() => ({}));
                 showToast(err.error || '刪除失敗', 'error');
@@ -1026,7 +1172,7 @@ async function loadScripts() {
         }
         
         // 直接獲取所有腳本
-        const response = await fetch(`${API_BASE_URL}/admin/scripts`);
+        const response = await adminFetch(`${API_BASE_URL}/admin/scripts`);
         const data = await response.json();
         const allScripts = data.scripts || [];
         
@@ -1119,7 +1265,7 @@ async function loadScripts() {
 async function loadGenerations() {
     try {
         // 調用真實 API
-        const response = await fetch(`${API_BASE_URL}/admin/generations`);
+        const response = await adminFetch(`${API_BASE_URL}/admin/generations`);
         const data = await response.json();
         const generations = data.generations || [];
         
@@ -1209,7 +1355,7 @@ async function loadGenerations() {
 async function loadAnalytics() {
     try {
         // 調用真實 API
-        const response = await fetch(`${API_BASE_URL}/admin/analytics-data`);
+        const response = await adminFetch(`${API_BASE_URL}/admin/analytics-data`);
         const data = await response.json();
         
         // 平台使用分布
@@ -1362,7 +1508,7 @@ document.addEventListener('click', function(event) {
 // ===== 訂閱管理功能 =====
 async function toggleSubscribe(userId, subscribe) {
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/users/${userId}/subscription`, {
+        const response = await adminFetch(`${API_BASE_URL}/admin/users/${userId}/subscription`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
@@ -1422,7 +1568,7 @@ function updateSubscribeUI(userId, isSubscribed) {
 // ===== CSV 匯出功能 =====
 async function exportCSV(type) {
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/export/${type}`);
+        const response = await adminFetch(`${API_BASE_URL}/admin/export/${type}`);
         const blob = await response.blob();
         
         // 創建下載連結
@@ -1445,7 +1591,7 @@ async function exportCSV(type) {
 // ===== 購買記錄 =====
 async function loadOrders() {
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/orders`);
+        const response = await adminFetch(`${API_BASE_URL}/admin/orders`);
         const data = await response.json();
         const allOrders = data.orders || [];
         
