@@ -1134,7 +1134,7 @@ async function loadConversations() {
                         <span class="mobile-card-value">${formatDate(conv.created_at)}</span>
                     </div>
                     <div class="mobile-card-actions">
-                        <button class="btn-action btn-view" onclick="viewConversation('${conv.user_id}', '${conv.mode}')" type="button">查看詳情</button>
+                        <button class="btn-action btn-view" onclick="viewConversation('${escapeHtml(conv.user_id)}', '${escapeHtml(conv.conversation_type || conv.mode)}', '${escapeHtml(conv.mode)}')" type="button">查看詳情</button>
                     </div>
                 </div>
             `).join('');
@@ -1144,18 +1144,22 @@ async function loadConversations() {
             // 桌面版：表格佈局
             const tbody = await waitFor('#conversations-table-body', 8000).catch(() => null);
             if (!tbody) return;
-            setHTML(tbody, allConversations.map(conv => `
+            setHTML(tbody, allConversations.map(conv => {
+                // 使用 conversation_type 如果存在，否則使用 mode
+                const convType = conv.conversation_type || conv.mode;
+                return `
                 <tr>
-                    <td>${conv.user_id.substring(0, 12)}...</td>
-                    <td>${conv.mode}</td>
-                    <td>${conv.summary.substring(0, 30)}...</td>
+                    <td>${escapeHtml(conv.user_id.substring(0, 12))}...</td>
+                    <td>${escapeHtml(conv.mode)}</td>
+                    <td>${escapeHtml(conv.summary.substring(0, 30))}...</td>
                     <td>${conv.message_count}</td>
                     <td>${formatDate(conv.created_at)}</td>
                     <td>
-                        <button class="btn-action btn-view" onclick="viewConversation('${conv.user_id}', '${conv.mode}')" type="button">查看</button>
+                        <button class="btn-action btn-view" onclick="viewConversation('${escapeHtml(conv.user_id)}', '${escapeHtml(convType)}', '${escapeHtml(conv.mode)}')" type="button">查看</button>
                     </td>
                 </tr>
-            `).join(''));
+            `;
+            }).join(''));
         }
         
         // 添加匯出按鈕
@@ -1186,56 +1190,151 @@ async function loadConversations() {
 }
 
 // 查看對話詳情
-function viewConversation(userId, mode) {
+async function viewConversation(userId, conversationType, modeDisplay) {
+    // conversationType: 原始的 conversation_type（如 'account_positioning'）
+    // modeDisplay: 顯示用的 mode（如 '帳號定位'）
+    
     // 打開彈窗
     const modal = document.getElementById('conversation-modal');
     modal.classList.add('active');
     
     // 顯示載入中
     const content = document.getElementById('conversation-detail-content');
-    content.innerHTML = '<p>載入對話內容中...</p>';
+    content.innerHTML = '<p style="text-align: center; padding: 2rem;">載入對話內容中...</p>';
     
-    // 模擬對話數據（實際應該從API獲取）
-    const mockMessages = [
-        {
-            role: 'user',
-            content: '我想要開始做短影音，應該怎麼開始？',
-            time: '2025-01-10 10:30:00'
-        },
-        {
-            role: 'ai',
-            content: '很高興為您服務！開始做短影音之前，我需要了解幾個問題：\n1. 您想在哪個平台發布？（抖音、小紅書、Instagram等）\n2. 您的目標受眾是誰？\n3. 您想創作什麼類型的內容？（美食、旅遊、教育等）',
-            time: '2025-01-10 10:30:15'
-        },
-        {
-            role: 'user',
-            content: '我想在抖音上做美食類的短影音，目標受眾是年輕女性。',
-            time: '2025-01-10 10:31:00'
-        },
-        {
-            role: 'ai',
-            content: '很棒的方向！針對抖音美食內容，我建議：\n\n🎯 帳號定位：年輕女性的美食探索日記\n📝 內容方向：\n- 快速美食製作（3-5分鐘內）\n- 網紅美食探店\n- 在家就能做的餐廳級料理\n\n🔥 熱門標籤：#美食日常 #在家做飯 #美食探店',
-            time: '2025-01-10 10:31:30'
+    try {
+        // 將 mode 轉換為 conversation_type（如果沒有直接傳入 conversationType）
+        const modeToType = {
+            '帳號定位': 'account_positioning',
+            '選題討論': 'topic_selection',
+            '腳本生成': 'script_generation',
+            'AI顧問': 'general_consultation',
+            'IP人設規劃': 'ip_planning',
+            'account_positioning': 'account_positioning',
+            'topic_selection': 'topic_selection',
+            'script_generation': 'script_generation',
+            'general_consultation': 'general_consultation',
+            'ip_planning': 'ip_planning',
+            'ai_advisor': 'ai_advisor'
+        };
+        
+        // 如果 conversationType 是中文，需要轉換
+        const actualType = conversationType && !modeToType[conversationType] ? 
+            modeToType[conversationType] || conversationType : 
+            conversationType || modeToType[modeDisplay] || modeDisplay;
+        
+        const displayMode = modeDisplay || conversationType;
+        
+        // 從 API 獲取該用戶的長期記憶
+        const response = await adminFetch(`${API_BASE_URL}/admin/long-term-memory/user/${userId}`);
+        
+        if (!response.ok) {
+            content.innerHTML = `<p style="text-align: center; padding: 2rem; color: #ef4444;">載入失敗: ${response.status}</p>`;
+            showToast('載入對話詳情失敗', 'error');
+            return;
         }
-    ];
-    
-    // 渲染對話內容
-    setTimeout(() => {
-        let messagesHtml = '<div class="conversation-detail">';
-        mockMessages.forEach(msg => {
-            messagesHtml += `
-                <div class="message-item ${msg.role}">
-                    <div class="message-header">
-                        <span class="message-role">${msg.role === 'user' ? '👤 用戶' : '🤖 AI助理'}</span>
-                        <span class="message-time">${msg.time}</span>
-                    </div>
-                    <div class="message-content">${msg.content}</div>
+        
+        const data = await response.json();
+        const memories = data.memories || [];
+        
+        // 篩選出符合對話類型的記憶
+        const filteredMemories = memories.filter(mem => {
+            // 直接匹配 conversation_type
+            if (mem.conversation_type === actualType) {
+                return true;
+            }
+            // 兼容性匹配：處理不同命名方式
+            if (actualType === 'general_consultation' && mem.conversation_type === 'ai_advisor') {
+                return true;
+            }
+            if (actualType === 'ai_advisor' && mem.conversation_type === 'general_consultation') {
+                return true;
+            }
+            if (actualType === 'account_positioning' && mem.conversation_type === 'ip_planning') {
+                return true;
+            }
+            if (actualType === 'ip_planning' && mem.conversation_type === 'account_positioning') {
+                return true;
+            }
+            return false;
+        });
+        
+        if (filteredMemories.length === 0) {
+            content.innerHTML = `
+                <div style="padding: 2rem; text-align: center;">
+                    <p style="color: #64748b; margin-bottom: 1rem;">此對話類型沒有找到詳細記錄</p>
+                    <p style="color: #94a3b8; font-size: 0.9em;">用戶ID: ${escapeHtml(userId)}</p>
+                    <p style="color: #94a3b8; font-size: 0.9em;">對話類型: ${escapeHtml(displayMode)}</p>
                 </div>
             `;
+            return;
+        }
+        
+        // 按 session_id 分組，然後按時間排序
+        const sessions = {};
+        filteredMemories.forEach(mem => {
+            const sessionId = mem.session_id || 'default';
+            if (!sessions[sessionId]) {
+                sessions[sessionId] = [];
+            }
+            sessions[sessionId].push(mem);
         });
+        
+        // 獲取最新的會話（按第一個消息的時間排序）
+        const sortedSessions = Object.entries(sessions).sort((a, b) => {
+            const aTime = a[1][0]?.created_at || '';
+            const bTime = b[1][0]?.created_at || '';
+            return new Date(bTime) - new Date(aTime);
+        });
+        
+        // 顯示最新的會話（或所有會話）
+        let messagesHtml = '<div class="conversation-detail">';
+        
+        // 顯示用戶資訊
+        if (memories.length > 0) {
+            const userInfo = memories[0];
+            messagesHtml += `
+                <div style="padding: 12px; background: #f8fafc; border-radius: 8px; margin-bottom: 16px;">
+                    <p style="margin: 4px 0;"><strong>用戶：</strong>${escapeHtml(userInfo.user_name || '未知')} <span style="color: #64748b;">${escapeHtml(userInfo.user_email || '')}</span></p>
+                    <p style="margin: 4px 0;"><strong>對話類型：</strong>${escapeHtml(displayMode)}</p>
+                    <p style="margin: 4px 0;"><strong>消息數：</strong>${filteredMemories.length} 條</p>
+                </div>
+            `;
+        }
+        
+        // 顯示每個會話的對話內容
+        sortedSessions.forEach(([sessionId, sessionMessages], sessionIndex) => {
+            // 按時間排序會話內的消息
+            sessionMessages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            
+            if (sortedSessions.length > 1) {
+                messagesHtml += `<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e2e8f0;"><strong style="color: #64748b;">會話 ${sessionIndex + 1}</strong></div>`;
+            }
+            
+            sessionMessages.forEach(msg => {
+                const isUser = msg.message_role === 'user';
+                const timeStr = formatDateTime(msg.created_at);
+                
+                messagesHtml += `
+                    <div class="message-item ${msg.message_role}" style="margin-bottom: 16px; padding: 12px; background: ${isUser ? '#f1f5f9' : '#f8fafc'}; border-radius: 8px; border-left: 3px solid ${isUser ? '#3b82f6' : '#10b981'};">
+                        <div class="message-header" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <span class="message-role" style="font-weight: 600; color: ${isUser ? '#3b82f6' : '#10b981'};">${isUser ? '👤 用戶' : '🤖 AI助理'}</span>
+                            <span class="message-time" style="color: #64748b; font-size: 0.85em;">${timeStr}</span>
+                        </div>
+                        <div class="message-content" style="white-space: pre-wrap; word-wrap: break-word; color: #1e293b;">${escapeHtml(msg.message_content || '')}</div>
+                    </div>
+                `;
+            });
+        });
+        
         messagesHtml += '</div>';
         content.innerHTML = messagesHtml;
-    }, 500);
+        
+    } catch (error) {
+        console.error('載入對話詳情失敗:', error);
+        content.innerHTML = `<p style="text-align: center; padding: 2rem; color: #ef4444;">載入失敗: ${escapeHtml(error.message)}</p>`;
+        showToast('載入對話詳情失敗', 'error');
+    }
 }
 
 // 關閉彈窗
