@@ -250,13 +250,6 @@
             <div class="section" id="long-term-memory">
                 <div class="section-header">
                     <h2>長期記憶管理</h2>
-                    <select id="memory-filter" onchange="loadLongTermMemory()">
-                        <option value="all">全部記憶</option>
-                        <option value="ai_advisor">AI顧問對話</option>
-                        <option value="ip_planning">IP人設規劃</option>
-                        <option value="llm_chat">LLM對話</option>
-                        <option value="script_generation">腳本生成</option>
-                    </select>
                 </div>
                 
                 <div class="stats-grid">
@@ -295,11 +288,11 @@
                         <thead>
                             <tr>
                                 <th>用戶</th>
+                                <th>用戶ID</th>
+                                <th>記憶數</th>
+                                <th>會話數</th>
                                 <th>對話類型</th>
-                                <th>會話ID</th>
-                                <th>角色</th>
-                                <th>內容預覽</th>
-                                <th>時間</th>
+                                <th>時間範圍</th>
                                 <th>操作</th>
                             </tr>
                         </thead>

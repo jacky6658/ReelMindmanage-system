@@ -1310,56 +1310,51 @@ function deleteScript(scriptId) {
 // ===== 長期記憶管理 =====
 async function loadLongTermMemory() {
     try {
-        const filter = document.getElementById('memory-filter').value;
-        
         // 載入統計數據
         await loadMemoryStats();
         
-        // 載入記憶列表
-        const response = await adminFetch(`${API_BASE_URL}/admin/long-term-memory${filter !== 'all' ? `?conversation_type=${filter}` : ''}`);
+        // 載入按用戶分組的記憶列表
+        const response = await adminFetch(`${API_BASE_URL}/admin/long-term-memory/by-user`);
         const data = await response.json();
-        const memories = data.memories || [];
+        const users = data.users || [];
         
-        // 顯示記憶列表
+        // 顯示用戶列表
         const tbody = await waitFor('#memory-table-body', 8000).catch(() => null);
         if (!tbody) return;
-        if (memories.length === 0) {
+        if (users.length === 0) {
             setHTML(tbody, '<tr><td colspan="7" style="text-align: center; padding: 2rem;">暫無長期記憶記錄</td></tr>');
             return;
         }
         
-        setHTML(tbody, memories.map(memory => `
+        setHTML(tbody, users.map(user => `
             <tr>
                 <td>
                     <div class="user-info">
-                        <span class="user-name">${memory.user_name || memory.user_id}</span>
-                        <span class="user-email">${memory.user_email || ''}</span>
+                        <span class="user-name">${escapeHtml(user.user_name || '未知')}</span>
+                        <span class="user-email">${escapeHtml(user.user_email || '')}</span>
                     </div>
                 </td>
                 <td>
-                    <span class="conversation-type ${memory.conversation_type}">
-                        ${getConversationTypeLabel(memory.conversation_type)}
+                    <span class="user-id">${escapeHtml(user.user_id.substring(0, 20))}${user.user_id.length > 20 ? '...' : ''}</span>
+                </td>
+                <td>
+                    <span class="badge">${user.total_memories}</span>
+                </td>
+                <td>
+                    <span class="badge">${user.session_count}</span>
+                </td>
+                <td>
+                    <span class="conversation-types">
+                        ${user.types_list.split(',').map(type => `<span class="conversation-type ${type.trim()}">${getConversationTypeLabel(type.trim())}</span>`).join(' ')}
                     </span>
                 </td>
                 <td>
-                    <span class="session-id">${memory.session_id ? memory.session_id.substring(0, 8) + '...' : '-'}</span>
+                    <span class="timestamp">${formatDateTime(user.first_memory)}</span>
+                    <br>
+                    <span class="timestamp" style="color: #64748b; font-size: 0.85em;">最後: ${formatDateTime(user.last_memory)}</span>
                 </td>
                 <td>
-                    <span class="message-role ${memory.message_role}">
-                        ${memory.message_role === 'user' ? '👤 用戶' : '🤖 AI'}
-                    </span>
-                </td>
-                <td>
-                    <div class="content-preview">
-                        ${memory.message_content ? memory.message_content.substring(0, 100) + (memory.message_content.length > 100 ? '...' : '') : '-'}
-                    </div>
-                </td>
-                <td>
-                    <span class="timestamp">${formatDateTime(memory.created_at)}</span>
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-primary" onclick="viewMemoryDetail(${memory.id})">查看</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteMemory(${memory.id})">刪除</button>
+                    <button class="btn btn-sm btn-primary" onclick="viewUserMemoryDetail('${escapeHtml(user.user_id)}')">查看詳情</button>
                 </td>
             </tr>
         `).join(''));
@@ -1367,6 +1362,101 @@ async function loadLongTermMemory() {
     } catch (error) {
         console.error('載入長期記憶失敗:', error);
         showToast('載入長期記憶失敗', 'error');
+    }
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+async function viewUserMemoryDetail(userId) {
+    try {
+        const response = await adminFetch(`${API_BASE_URL}/admin/long-term-memory/user/${userId}`);
+        if (!response.ok) {
+            showToast('載入用戶記憶詳情失敗', 'error');
+            return;
+        }
+        const data = await response.json();
+        const memories = data.memories || [];
+        const user = memories.length > 0 ? {
+            name: memories[0].user_name || '未知',
+            email: memories[0].user_email || '',
+            id: data.user_id
+        } : { name: '未知', email: '', id: userId };
+        
+        // 按會話分組
+        const sessions = {};
+        memories.forEach(mem => {
+            const sessionId = mem.session_id || 'unknown';
+            if (!sessions[sessionId]) {
+                sessions[sessionId] = {
+                    conversation_type: mem.conversation_type,
+                    messages: []
+                };
+            }
+            sessions[sessionId].messages.push(mem);
+        });
+        
+        // 按時間排序會話
+        const sortedSessions = Object.entries(sessions).sort((a, b) => {
+            const aTime = a[1].messages[0]?.created_at || '';
+            const bTime = b[1].messages[0]?.created_at || '';
+            return bTime.localeCompare(aTime);
+        });
+        
+        let content = `
+            <div style="padding:20px; max-height: 80vh; overflow-y: auto;">
+                <h3 style="margin:0 0 12px 0;">用戶長期記憶詳情</h3>
+                <div style="margin-bottom:16px; padding:12px; background:#f8fafc; border-radius:8px;">
+                    <div style="margin-bottom:4px;"><strong>用戶：</strong>${escapeHtml(user.name)} <span style="color:#64748b;">${escapeHtml(user.email)}</span></div>
+                    <div style="margin-bottom:4px;"><strong>用戶ID：</strong>${escapeHtml(user.id)}</div>
+                    <div><strong>總記憶數：</strong>${memories.length} 筆</div>
+                </div>
+        `;
+        
+        sortedSessions.forEach(([sessionId, session], index) => {
+            const messages = session.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            const firstMessage = messages[0];
+            const lastMessage = messages[messages.length - 1];
+            
+            content += `
+                <div style="margin-bottom:24px; padding:16px; background:#ffffff; border:1px solid #e2e8f0; border-radius:8px;">
+                    <div style="margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid #e2e8f0;">
+                        <strong>會話 ${index + 1}</strong>
+                        <span style="color:#64748b; margin-left:12px;">${getConversationTypeLabel(session.conversation_type)}</span>
+                        <span style="color:#64748b; margin-left:12px;">(${messages.length} 條訊息)</span>
+                        <span style="color:#64748b; margin-left:12px; font-size:0.9em;">${formatDateTime(firstMessage.created_at)}</span>
+                    </div>
+                    <div style="max-height: 400px; overflow-y: auto;">
+            `;
+            
+            messages.forEach((msg, msgIndex) => {
+                const isUser = msg.message_role === 'user';
+                content += `
+                    <div style="margin-bottom:12px; padding:12px; background:${isUser ? '#f1f5f9' : '#f8fafc'}; border-radius:6px; border-left:3px solid ${isUser ? '#3b82f6' : '#10b981'};">
+                        <div style="margin-bottom:4px; font-weight:600; color:${isUser ? '#3b82f6' : '#10b981'};">
+                            ${isUser ? '👤 用戶' : '🤖 AI'}
+                            <span style="color:#64748b; font-weight:400; font-size:0.85em; margin-left:8px;">${formatDateTime(msg.created_at)}</span>
+                        </div>
+                        <div style="white-space:pre-wrap; word-wrap:break-word;">${escapeHtml(msg.message_content || '-')}</div>
+                    </div>
+                `;
+            });
+            
+            content += `
+                    </div>
+                </div>
+            `;
+        });
+        
+        content += `</div>`;
+        showUserDetailModal(content);
+    } catch (error) {
+        console.error('載入用戶記憶詳情失敗:', error);
+        showToast('載入用戶記憶詳情失敗', 'error');
     }
 }
 
