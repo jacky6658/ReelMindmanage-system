@@ -63,6 +63,10 @@
                     <span class="icon">📝</span>
                     <span>腳本管理</span>
                 </a>
+                <a href="#" class="nav-item" data-section="ip-planning">
+                    <span class="icon">🎭</span>
+                    <span>IP人設規劃</span>
+                </a>
                 <a href="#" class="nav-item" data-section="orders">
                     <span class="icon">💳</span>
                     <span>購買記錄</span>
@@ -338,6 +342,40 @@
                             </tr>
                         </thead>
                         <tbody id="scripts-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- IP人設規劃管理頁面 -->
+            <div class="section" id="ip-planning">
+                <div class="section-header">
+                    <h2>IP人設規劃管理</h2>
+                    <div class="filters">
+                        <select id="ip-planning-filter-type" onchange="loadIpPlanningResults()">
+                            <option value="">所有類型</option>
+                            <option value="profile">IP Profile</option>
+                            <option value="plan">14天規劃</option>
+                            <option value="scripts">今日腳本</option>
+                        </select>
+                        <select id="ip-planning-filter-user" onchange="loadIpPlanningResults()">
+                            <option value="">所有用戶</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="ip-planning-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>用戶</th>
+                                <th>類型</th>
+                                <th>標題</th>
+                                <th>內容預覽</th>
+                                <th>創建時間</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ip-planning-table-body"></tbody>
                     </table>
                 </div>
             </div>

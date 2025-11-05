@@ -487,6 +487,7 @@ function switchSection(section) {
         'conversations': '對話記錄',
         'long-term-memory': '長期記憶',
         'scripts': '腳本管理',
+        'ip-planning': 'IP人設規劃',
         'orders': '購買記錄',
         // 'generations': '生成記錄', // 已隱藏
         'analytics': '數據分析',
@@ -523,6 +524,9 @@ function loadSectionData(section) {
             break;
         case 'scripts':
             loadScripts();
+            break;
+        case 'ip-planning':
+            loadIpPlanningResults();
             break;
         case 'orders':
             loadOrders();
@@ -1985,6 +1989,159 @@ async function loadScripts() {
         console.error('載入腳本失敗:', error);
         showToast('載入腳本失敗', 'error');
     }
+}
+
+// ===== IP人設規劃管理 =====
+async function loadIpPlanningResults() {
+    try {
+        const isMobile = window.innerWidth <= 768;
+        const tableContainer = await waitFor('#ip-planning .table-container', 8000).catch(() => null);
+        if (!tableContainer) {
+            console.warn('[ip-planning] container missing');
+            return;
+        }
+        
+        // 獲取篩選條件
+        const typeFilter = document.getElementById('ip-planning-filter-type')?.value || '';
+        const url = typeFilter 
+            ? `${API_BASE_URL}/admin/ip-planning?result_type=${typeFilter}`
+            : `${API_BASE_URL}/admin/ip-planning`;
+        
+        const response = await adminFetch(url);
+        const data = await response.json();
+        const results = data.results || [];
+        
+        // 顯示結果
+        if (results.length === 0) {
+            if (isMobile) {
+                tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">暫無 IP 人設規劃記錄</div>';
+            } else {
+                document.getElementById('ip-planning-table-body').innerHTML = 
+                    '<tr><td colspan="7" style="text-align: center; padding: 2rem;">暫無 IP 人設規劃記錄</td></tr>';
+            }
+            return;
+        }
+        
+        if (isMobile) {
+            // 手機版：卡片式佈局
+            setHTML(tableContainer, '');
+            const cardsContainer = document.createElement('div');
+            cardsContainer.className = 'mobile-cards-container';
+            
+            cardsContainer.innerHTML = results.map((result, index) => {
+                const typeName = result.result_type === 'profile' ? 'IP Profile' : 
+                                result.result_type === 'plan' ? '14天規劃' : '今日腳本';
+                const contentPreview = (result.content || '').replace(/<[^>]*>/g, '').substring(0, 100);
+                
+                return `
+                <div class="mobile-card">
+                    <div class="mobile-card-header">
+                        <span class="mobile-card-title">${result.title || typeName}</span>
+                        <span class="mobile-card-badge">${typeName}</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">用戶</span>
+                        <span class="mobile-card-value">${result.user_name || result.user_id.substring(0, 16)}...</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">內容預覽</span>
+                        <span class="mobile-card-value">${contentPreview}...</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">時間</span>
+                        <span class="mobile-card-value">${formatDate(result.created_at)}</span>
+                    </div>
+                    <div class="mobile-card-actions">
+                        <button class="btn-action btn-view" onclick="viewIpPlanningResultByIdx(${index})" type="button">查看詳情</button>
+                    </div>
+                </div>
+            `;
+            }).join('');
+            
+            tableContainer.appendChild(cardsContainer);
+        } else {
+            // 桌面版：表格佈局
+            const tbody = await waitFor('#ip-planning-table-body', 8000).catch(() => null);
+            if (!tbody) return;
+            
+            setHTML(tbody, results.map((result, index) => {
+                const typeName = result.result_type === 'profile' ? 'IP Profile' : 
+                                result.result_type === 'plan' ? '14天規劃' : '今日腳本';
+                const contentPreview = (result.content || '').replace(/<[^>]*>/g, '').substring(0, 150);
+                
+                return `
+                <tr>
+                    <td>${result.id}</td>
+                    <td>${result.user_name || result.user_id.substring(0, 12)}...</td>
+                    <td><span class="badge">${typeName}</span></td>
+                    <td>${result.title || '-'}</td>
+                    <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${contentPreview}">${contentPreview}...</td>
+                    <td>${formatDate(result.created_at)}</td>
+                    <td>
+                        <button class="btn-action btn-view" onclick="viewIpPlanningResultByIdx(${index})" type="button">查看詳情</button>
+                    </td>
+                </tr>
+            `;
+            }).join(''));
+        }
+        
+        // 保存結果數據供查看功能使用
+        window.allIpPlanningResults = results;
+        
+    } catch (error) {
+        console.error('載入 IP 人設規劃結果失敗:', error);
+        showToast('載入 IP 人設規劃結果失敗', 'error');
+    }
+}
+
+// 查看 IP 人設規劃結果詳情
+function viewIpPlanningResultByIdx(index) {
+    const result = window.allIpPlanningResults?.[index];
+    if (!result) {
+        showToast('找不到結果', 'error');
+        return;
+    }
+    
+    const typeName = result.result_type === 'profile' ? 'IP Profile' : 
+                    result.result_type === 'plan' ? '14天規劃' : '今日腳本';
+    
+    // 創建詳情彈窗
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;';
+    
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+    modalContent.style.cssText = 'background: white; border-radius: 8px; padding: 24px; max-width: 800px; max-height: 80vh; overflow-y: auto; position: relative;';
+    
+    modalContent.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0;">${typeName} - 詳細內容</h2>
+            <button onclick="this.closest('.modal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #666;">&times;</button>
+        </div>
+        <div style="margin-bottom: 16px;">
+            <strong>用戶：</strong>${result.user_name || result.user_id}<br>
+            <strong>類型：</strong>${typeName}<br>
+            <strong>標題：</strong>${result.title || '-'}<br>
+            <strong>創建時間：</strong>${formatDate(result.created_at)}
+        </div>
+        <div style="border-top: 1px solid #e2e8f0; padding-top: 20px;">
+            <h3 style="margin-top: 0;">內容：</h3>
+            <div style="background: #f8f9fa; padding: 16px; border-radius: 4px; line-height: 1.6; color: #374151;">
+                ${result.content || '無內容'}
+            </div>
+        </div>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    // 點擊背景關閉
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
 }
 
 // ===== 生成記錄 =====
