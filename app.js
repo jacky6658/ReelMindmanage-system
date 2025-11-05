@@ -1125,10 +1125,34 @@ async function loadConversations() {
             return;
         }
         
-        // 直接獲取所有對話記錄
-        const response = await adminFetch(`${API_BASE_URL}/admin/conversations`);
+        // 顯示載入中
+        if (isMobile) {
+            tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">載入中...</div>';
+        } else {
+            const tbody = document.getElementById('conversations-table-body');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">載入中...</td></tr>';
+            }
+        }
+        
+        // 獲取對話記錄（帶分頁參數）
+        const response = await adminFetch(`${API_BASE_URL}/admin/conversations?page=${currentConversationPage}&limit=100`);
         const data = await response.json();
-        const allConversations = data.conversations || [];
+        let allConversations = data.conversations || [];
+        
+        // 根據篩選條件過濾對話記錄
+        if (filter === 'mode2') {
+            // AI顧問模式：選題討論、腳本生成、一般諮詢
+            allConversations = allConversations.filter(conv => 
+                ['topic_selection', 'script_generation', 'general_consultation'].includes(conv.conversation_type)
+            );
+        } else if (filter === 'mode3') {
+            // IP人設規劃模式
+            allConversations = allConversations.filter(conv => 
+                conv.conversation_type === 'ip_planning'
+            );
+        }
+        // filter === 'all' 時不進行篩選，顯示所有對話
         
         // 顯示對話記錄
         if (allConversations.length === 0) {
@@ -1194,23 +1218,81 @@ async function loadConversations() {
             }).join(''));
         }
         
-        // 添加匯出按鈕
+        // 添加分頁控制和匯出按鈕
         const actionsDiv = document.querySelector('#conversations .section-actions');
         if (actionsDiv) {
+            // 清除現有分頁按鈕
+            const existingPagination = actionsDiv.querySelector('.pagination-controls');
+            if (existingPagination) {
+                existingPagination.remove();
+            }
+            
+            // 添加分頁控制（如果有分頁資訊）
+            if (data.pagination && data.pagination.total_pages > 1) {
+                const paginationDiv = document.createElement('div');
+                paginationDiv.className = 'pagination-controls';
+                paginationDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-right: 12px;';
+                
+                const pageInfo = document.createElement('span');
+                pageInfo.style.cssText = 'color: #64748b; font-size: 0.9em; margin-right: 8px;';
+                pageInfo.textContent = `第 ${data.pagination.page} / ${data.pagination.total_pages} 頁（共 ${data.pagination.total} 筆）`;
+                
+                const prevBtn = document.createElement('button');
+                prevBtn.className = 'btn btn-secondary';
+                prevBtn.innerHTML = '← 上一頁';
+                prevBtn.disabled = !data.pagination.has_prev;
+                prevBtn.onclick = () => {
+                    if (data.pagination.has_prev) {
+                        loadConversationsWithPage(data.pagination.page - 1);
+                    }
+                };
+                
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'btn btn-secondary';
+                nextBtn.innerHTML = '下一頁 →';
+                nextBtn.disabled = !data.pagination.has_next;
+                nextBtn.onclick = () => {
+                    if (data.pagination.has_next) {
+                        loadConversationsWithPage(data.pagination.page + 1);
+                    }
+                };
+                
+                paginationDiv.appendChild(pageInfo);
+                paginationDiv.appendChild(prevBtn);
+                paginationDiv.appendChild(nextBtn);
+                actionsDiv.insertBefore(paginationDiv, actionsDiv.firstChild);
+            }
+            
+            // 添加匯出按鈕
             let exportBtn = actionsDiv.querySelector('.btn-export');
             if (!exportBtn) {
                 exportBtn = document.createElement('button');
                 exportBtn.className = 'btn btn-secondary btn-export';
                 exportBtn.innerHTML = '<i class="icon">📥</i> 匯出 CSV';
                 exportBtn.onclick = () => exportCSV('conversations');
-                actionsDiv.insertBefore(exportBtn, actionsDiv.firstChild);
+                actionsDiv.appendChild(exportBtn);
             }
         }
-        
     } catch (error) {
         console.error('載入對話記錄失敗:', error);
         showToast('載入對話記錄失敗', 'error');
         const isMobile = window.innerWidth <= 768;
+        const tableContainer = document.querySelector('#conversations .table-container');
+        if (isMobile) {
+            if (tableContainer) tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">載入失敗</div>';
+        } else {
+            const tbody = document.querySelector('#conversations-table-body');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">載入失敗</td></tr>';
+        }
+    }
+}
+
+// 載入指定頁的對話記錄
+let currentConversationPage = 1;
+async function loadConversationsWithPage(page) {
+    currentConversationPage = page;
+    await loadConversations();
+}
         const tableContainer = document.querySelector('#conversations .table-container');
         if (isMobile) {
             if (tableContainer) setHTML(tableContainer, '<div style="text-align: center; padding: 2rem;">載入失敗</div>');
@@ -1292,6 +1374,43 @@ async function viewConversation(userId, conversationType, modeDisplay) {
         });
         
         if (filteredMemories.length === 0) {
+            // 如果長期記憶沒有記錄，嘗試從 conversation_summaries 獲取摘要
+            try {
+                const summaryResponse = await adminFetch(`${API_BASE_URL}/admin/conversations?limit=1000`);
+                const summaryData = await summaryResponse.json();
+                const summaryConversations = summaryData.conversations || [];
+                const summaryConv = summaryConversations.find(conv => 
+                    conv.user_id === userId && 
+                    (conv.conversation_type === actualType || conv.mode === displayMode)
+                );
+                
+                if (summaryConv) {
+                    content.innerHTML = `
+                        <div style="padding: 2rem;">
+                            <div style="padding: 12px; background: #f8fafc; border-radius: 8px; margin-bottom: 16px;">
+                                <p style="margin: 4px 0;"><strong>用戶：</strong>${escapeHtml(summaryConv.user_name || '未知')} <span style="color: #64748b;">${escapeHtml(summaryConv.user_email || '')}</span></p>
+                                <p style="margin: 4px 0;"><strong>對話類型：</strong>${escapeHtml(displayMode)}</p>
+                                <p style="margin: 4px 0;"><strong>消息數：</strong>${summaryConv.message_count || 0} 條</p>
+                                <p style="margin: 4px 0;"><strong>時間：</strong>${formatDate(summaryConv.created_at)}</p>
+                            </div>
+                            <div style="padding: 16px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;">
+                                <h4 style="margin: 0 0 12px 0; color: #1e293b;">對話摘要</h4>
+                                <p style="color: #64748b; line-height: 1.6; white-space: pre-wrap;">${escapeHtml(summaryConv.summary || '無摘要')}</p>
+                            </div>
+                            <div style="margin-top: 16px; padding: 12px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px;">
+                                <p style="margin: 0; color: #92400e; font-size: 0.9em;">
+                                    ⚠️ 注意：此對話僅有摘要記錄，完整對話內容可能尚未保存到長期記憶中。
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+            } catch (e) {
+                console.error('獲取對話摘要失敗:', e);
+            }
+            
+            // 如果連摘要都沒有，顯示提示
             content.innerHTML = `
                 <div style="padding: 2rem; text-align: center;">
                     <p style="color: #64748b; margin-bottom: 1rem;">此對話類型沒有找到詳細記錄</p>
