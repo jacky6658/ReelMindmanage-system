@@ -1032,8 +1032,11 @@ async function loadModes() {
         document.getElementById('mode3-count').textContent = mode3.count || 0;
         document.getElementById('mode3-profile').textContent = mode3.profiles_generated || 0;
         
-        // 使用真實時間分布數據
-        const timeDist = data.time_distribution;
+        // 使用真實時間分布數據（分別顯示三個模式）
+        const timeDist = data.time_distribution || {};
+        const mode1Time = timeDist.mode1 || {};
+        const mode2Time = timeDist.mode2 || {};
+        const mode3Time = timeDist.mode3 || {};
         
         // 載入模式使用時間分布圖
         if (charts.modeTime) charts.modeTime.destroy();
@@ -1046,19 +1049,48 @@ async function loadModes() {
                     {
                         label: '一鍵生成',
                         data: [
-                            timeDist['00:00-06:00'] || 0,
-                            timeDist['06:00-12:00'] || 0,
-                            timeDist['12:00-18:00'] || 0,
-                            timeDist['18:00-24:00'] || 0
+                            mode1Time['00:00-06:00'] || 0,
+                            mode1Time['06:00-12:00'] || 0,
+                            mode1Time['12:00-18:00'] || 0,
+                            mode1Time['18:00-24:00'] || 0
                         ],
                         backgroundColor: '#3b82f6'
+                    },
+                    {
+                        label: 'AI顧問',
+                        data: [
+                            mode2Time['00:00-06:00'] || 0,
+                            mode2Time['06:00-12:00'] || 0,
+                            mode2Time['12:00-18:00'] || 0,
+                            mode2Time['18:00-24:00'] || 0
+                        ],
+                        backgroundColor: '#8b5cf6'
+                    },
+                    {
+                        label: 'IP人設規劃',
+                        data: [
+                            mode3Time['00:00-06:00'] || 0,
+                            mode3Time['06:00-12:00'] || 0,
+                            mode3Time['12:00-18:00'] || 0,
+                            mode3Time['18:00-24:00'] || 0
+                        ],
+                        backgroundColor: '#f59e0b'
                     }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                aspectRatio: 2
+                aspectRatio: 2,
+                scales: {
+                    x: {
+                        stacked: false
+                    },
+                    y: {
+                        stacked: false,
+                        beginAtZero: true
+                    }
+                }
             }
         });
         
