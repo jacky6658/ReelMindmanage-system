@@ -1293,15 +1293,6 @@ async function loadConversationsWithPage(page) {
     currentConversationPage = page;
     await loadConversations();
 }
-        const tableContainer = document.querySelector('#conversations .table-container');
-        if (isMobile) {
-            if (tableContainer) setHTML(tableContainer, '<div style="text-align: center; padding: 2rem;">載入失敗</div>');
-        } else {
-            const tbody = document.querySelector('#conversations-table-body');
-            if (tbody) setHTML(tbody, '<tr><td colspan="6" style="text-align: center; padding: 2rem;">載入失敗</td></tr>');
-        }
-    }
-}
 
 // 查看對話詳情
 async function viewConversation(userId, conversationType, modeDisplay) {
