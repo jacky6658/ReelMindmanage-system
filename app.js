@@ -65,13 +65,31 @@ function isTokenExpiringSoon(token) {
     }
 }
 
+// 登出功能
+function logout() {
+    if (confirm('確定要登出嗎？')) {
+        // 清除 token
+        setAdminToken('');
+        
+        // 清除任何其他相關的 localStorage 數據
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_login_time');
+        
+        // 顯示登入提示
+        showLoginRequired('已登出');
+        
+        showToast('已成功登出', 'success');
+    }
+}
+
 // 強制登出並清除所有狀態
 function forceLogout(reason = '登入已過期，請重新登入') {
     // 清除 token
     setAdminToken('');
     
     // 清除任何其他相關的 localStorage 數據（如果需要）
-    // localStorage.removeItem('其他相關數據');
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_login_time');
     
     // 顯示登入提示，並顯示過期訊息
     showLoginRequired(reason);
@@ -293,6 +311,8 @@ function showLoginRequired(message = '請選擇登入方式') {
             
             if (response.ok && data.access_token) {
                 setAdminToken(data.access_token);
+                // 保存登入時間
+                localStorage.setItem('admin_login_time', new Date().toISOString());
                 modal.remove();
                 location.reload();
             } else {
@@ -323,6 +343,8 @@ function checkAdminAuth() {
     
     if (tokenFromUrl) {
         setAdminToken(tokenFromUrl);
+        // 保存登入時間
+        localStorage.setItem('admin_login_time', new Date().toISOString());
         // 清除 URL 參數並重新載入
         window.history.replaceState({}, document.title, window.location.pathname);
         location.reload();
@@ -467,7 +489,8 @@ function switchSection(section) {
         'scripts': '腳本管理',
         'orders': '購買記錄',
         // 'generations': '生成記錄', // 已隱藏
-        'analytics': '數據分析'
+        'analytics': '數據分析',
+        'admin-settings': '管理員設定'
     };
     document.getElementById('page-title').textContent = titles[section];
     
@@ -509,6 +532,9 @@ function loadSectionData(section) {
         //     break;
         case 'analytics':
             loadAnalytics();
+            break;
+        case 'admin-settings':
+            loadAdminSettings();
             break;
     }
 }
@@ -2377,6 +2403,222 @@ async function exportCSV(type) {
     } catch (error) {
         console.error('匯出 CSV 失敗:', error);
         showToast('匯出 CSV 失敗', 'error');
+    }
+}
+
+// ===== 完整資料匯出功能 =====
+async function exportAllData(type) {
+    try {
+        showToast(`正在匯出 ${type}...`, 'info');
+        
+        if (type === 'full-backup') {
+            // 匯出完整備份：下載所有類型的 CSV 並打包
+            const types = ['users', 'conversations', 'scripts', 'orders', 'long-term-memory', 'generations'];
+            const files = [];
+            
+            for (const exportType of types) {
+                try {
+                    const response = await adminFetch(`${API_BASE_URL}/admin/export/${exportType}`);
+                    const blob = await response.blob();
+                    const text = await blob.text();
+                    files.push({ name: `${exportType}.csv`, content: text });
+                } catch (e) {
+                    console.warn(`匯出 ${exportType} 失敗:`, e);
+                }
+            }
+            
+            // 創建 ZIP 檔案（如果瀏覽器支援）
+            if (typeof JSZip !== 'undefined') {
+                const zip = new JSZip();
+                files.forEach(file => {
+                    zip.file(file.name, file.content);
+                });
+                const zipBlob = await zip.generateAsync({ type: 'blob' });
+                const url = window.URL.createObjectURL(zipBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `reelmind-backup-${new Date().toISOString().split('T')[0]}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                showToast('完整備份已匯出', 'success');
+            } else {
+                // 如果不支援 ZIP，逐一下載
+                files.forEach((file, index) => {
+                    setTimeout(() => {
+                        const blob = new Blob([file.content], { type: 'text/csv' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = file.name;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                    }, index * 500);
+                });
+                showToast('已開始下載所有檔案', 'success');
+            }
+        } else {
+            // 單一類型匯出
+            await exportCSV(type);
+        }
+    } catch (error) {
+        console.error('匯出失敗:', error);
+        showToast('匯出失敗', 'error');
+    }
+}
+
+// ===== 登出功能 =====
+function logout() {
+    if (confirm('確定要登出嗎？')) {
+        // 清除 token
+        setAdminToken('');
+        
+        // 清除其他相關數據
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_login_time');
+        
+        // 顯示登入提示
+        showLoginRequired('已登出');
+        
+        showToast('已登出', 'success');
+    }
+}
+
+// ===== 管理員設定頁面 =====
+async function loadAdminSettings() {
+    try {
+        // 載入當前管理員資訊
+        const token = getAdminToken();
+        if (token) {
+            try {
+                // 嘗試從 token 中解析管理員資訊（如果 token 包含）
+                const payload = JSON.parse(atob(token.split('.')[1] || '{}'));
+                const adminName = payload.email || payload.admin_id || '管理員';
+                document.getElementById('current-admin-name').textContent = adminName;
+            } catch (e) {
+                document.getElementById('current-admin-name').textContent = '管理員';
+            }
+            
+            // 顯示登入時間（從 localStorage 或當前時間）
+            const loginTime = localStorage.getItem('admin_login_time');
+            if (loginTime) {
+                document.getElementById('login-time').textContent = new Date(loginTime).toLocaleString('zh-TW');
+            } else {
+                localStorage.setItem('admin_login_time', new Date().toISOString());
+                document.getElementById('login-time').textContent = new Date().toLocaleString('zh-TW');
+            }
+        } else {
+            document.getElementById('current-admin-name').textContent = '未登入';
+            document.getElementById('login-time').textContent = '-';
+        }
+    } catch (error) {
+        console.error('載入管理員設定失敗:', error);
+    }
+}
+
+// ===== 檔案選擇處理 =====
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+        if (!file.name.endsWith('.csv')) {
+            showToast('請選擇 CSV 檔案', 'error');
+            event.target.value = '';
+            return;
+        }
+        
+        document.getElementById('import-file-name').textContent = file.name;
+        document.getElementById('import-btn').disabled = false;
+    }
+}
+
+// ===== 資料匯入功能 =====
+async function importData() {
+    const fileInput = document.getElementById('import-file');
+    const importType = document.getElementById('import-type').value;
+    const importMode = document.getElementById('import-mode').value;
+    
+    if (!fileInput.files || !fileInput.files[0]) {
+        showToast('請先選擇要匯入的檔案', 'error');
+        return;
+    }
+    
+    const file = fileInput.files[0];
+    
+    if (!confirm(`確定要匯入 ${file.name} 嗎？匯入模式：${importMode === 'add' ? '新增模式' : '覆蓋模式'}`)) {
+        return;
+    }
+    
+    try {
+        // 顯示進度條
+        const progressDiv = document.getElementById('import-progress');
+        const progressBar = document.getElementById('import-progress-bar');
+        const statusText = document.getElementById('import-status');
+        progressDiv.style.display = 'block';
+        progressBar.style.width = '10%';
+        statusText.textContent = '正在讀取檔案...';
+        
+        // 讀取檔案內容
+        const fileContent = await file.text();
+        progressBar.style.width = '30%';
+        statusText.textContent = '正在上傳資料...';
+        
+        // 創建 FormData
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('mode', importMode);
+        
+        // 發送請求
+        const token = getAdminToken();
+        const response = await fetch(`${API_BASE_URL}/admin/import/${importType}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+        
+        progressBar.style.width = '80%';
+        statusText.textContent = '正在處理資料...';
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            progressBar.style.width = '100%';
+            statusText.textContent = `匯入成功！成功：${result.success_count || 0}，失敗：${result.error_count || 0}`;
+            showToast(`匯入完成：成功 ${result.success_count || 0} 筆，失敗 ${result.error_count || 0} 筆`, 'success');
+            
+            // 重置表單
+            setTimeout(() => {
+                fileInput.value = '';
+                document.getElementById('import-file-name').textContent = '';
+                document.getElementById('import-btn').disabled = true;
+                progressDiv.style.display = 'none';
+                progressBar.style.width = '0%';
+                
+                // 重新載入相關頁面
+                if (importType === 'users') {
+                    loadUsers();
+                } else if (importType === 'scripts') {
+                    loadScripts();
+                } else if (importType === 'conversations') {
+                    loadConversations();
+                } else if (importType === 'orders') {
+                    loadOrders();
+                }
+            }, 2000);
+        } else {
+            progressBar.style.width = '0%';
+            statusText.textContent = `匯入失敗：${result.error || '未知錯誤'}`;
+            showToast(result.error || '匯入失敗', 'error');
+        }
+    } catch (error) {
+        console.error('匯入失敗:', error);
+        showToast('匯入失敗：' + error.message, 'error');
+        document.getElementById('import-progress').style.display = 'none';
+        document.getElementById('import-progress-bar').style.width = '0%';
     }
 }
 

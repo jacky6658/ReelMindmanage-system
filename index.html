@@ -75,7 +75,17 @@
                     <span class="icon">📈</span>
                     <span>數據分析</span>
                 </a>
+                <a href="#" class="nav-item" data-section="admin-settings">
+                    <span class="icon">⚙️</span>
+                    <span>管理員設定</span>
+                </a>
             </nav>
+            <div class="sidebar-footer">
+                <button class="btn-logout" onclick="logout()">
+                    <span class="icon">🚪</span>
+                    <span>登出</span>
+                </button>
+            </div>
         </div>
 
         <!-- 主內容區 -->
@@ -361,6 +371,99 @@
                         </thead>
                         <tbody id="generations-table-body"></tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- 管理員設定頁面 -->
+            <div class="section" id="admin-settings">
+                <div class="section-header">
+                    <h2>管理員設定</h2>
+                </div>
+                <div class="settings-container" style="padding: 2rem;">
+                    <!-- 資料匯出區塊 -->
+                    <div class="settings-card" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+                        <h3 style="margin: 0 0 16px 0; color: #1e293b;">📥 資料匯出</h3>
+                        <p style="color: #64748b; margin-bottom: 20px;">匯出所有後台管理系統的資料為 CSV 檔案</p>
+                        <div class="export-options" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+                            <button class="btn btn-secondary" onclick="exportAllData('users')">
+                                <i class="icon">👥</i> 匯出用戶資料
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportAllData('conversations')">
+                                <i class="icon">💬</i> 匯出對話記錄
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportAllData('scripts')">
+                                <i class="icon">📝</i> 匯出腳本資料
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportAllData('orders')">
+                                <i class="icon">💳</i> 匯出購買記錄
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportAllData('long-term-memory')">
+                                <i class="icon">🧠</i> 匯出長期記憶
+                            </button>
+                            <button class="btn btn-secondary" onclick="exportAllData('generations')">
+                                <i class="icon">✨</i> 匯出生成記錄
+                            </button>
+                            <button class="btn btn-primary" onclick="exportAllData('full-backup')" style="grid-column: 1 / -1;">
+                                <i class="icon">📦</i> 匯出完整備份（所有資料）
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 資料匯入區塊 -->
+                    <div class="settings-card" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px; margin-bottom: 24px;">
+                        <h3 style="margin: 0 0 16px 0; color: #1e293b;">📤 資料匯入</h3>
+                        <p style="color: #64748b; margin-bottom: 20px;">從 CSV 檔案匯入資料</p>
+                        <div class="import-options" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
+                            <label style="display: flex; flex-direction: column; gap: 8px;">
+                                <span style="font-weight: 600; color: #374151;">匯入類型</span>
+                                <select id="import-type" style="padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;">
+                                    <option value="users">用戶資料</option>
+                                    <option value="scripts">腳本資料</option>
+                                    <option value="conversations">對話記錄</option>
+                                    <option value="orders">購買記錄</option>
+                                </select>
+                            </label>
+                            <label style="display: flex; flex-direction: column; gap: 8px;">
+                                <span style="font-weight: 600; color: #374151;">匯入模式</span>
+                                <select id="import-mode" style="padding: 10px; border: 1px solid #d1d5db; border-radius: 6px;">
+                                    <option value="add">新增模式（跳過重複）</option>
+                                    <option value="replace">覆蓋模式（更新現有）</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div style="margin-bottom: 16px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">選擇 CSV 檔案</label>
+                            <input type="file" id="import-file" accept=".csv" style="display: none;" onchange="handleFileSelect(event)">
+                            <button class="btn btn-secondary" onclick="document.getElementById('import-file').click()">
+                                <i class="icon">📁</i> 選擇檔案
+                            </button>
+                            <span id="import-file-name" style="margin-left: 12px; color: #64748b;"></span>
+                        </div>
+                        <button class="btn btn-primary" onclick="importData()" id="import-btn" disabled>
+                            <i class="icon">📤</i> 開始匯入
+                        </button>
+                        <div id="import-progress" style="margin-top: 16px; display: none;">
+                            <div style="background: #f3f4f6; border-radius: 4px; height: 8px; overflow: hidden;">
+                                <div id="import-progress-bar" style="background: #3b82f6; height: 100%; width: 0%; transition: width 0.3s;"></div>
+                            </div>
+                            <p id="import-status" style="margin-top: 8px; color: #64748b; font-size: 0.9em;"></p>
+                        </div>
+                    </div>
+                    
+                    <!-- 系統資訊區塊 -->
+                    <div class="settings-card" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 24px;">
+                        <h3 style="margin: 0 0 16px 0; color: #1e293b;">ℹ️ 系統資訊</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                            <div>
+                                <span style="color: #64748b; font-size: 0.9em;">當前管理員</span>
+                                <p style="margin: 4px 0 0 0; font-weight: 600; color: #1e293b;" id="current-admin-name">載入中...</p>
+                            </div>
+                            <div>
+                                <span style="color: #64748b; font-size: 0.9em;">登入時間</span>
+                                <p style="margin: 4px 0 0 0; font-weight: 600; color: #1e293b;" id="login-time">-</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

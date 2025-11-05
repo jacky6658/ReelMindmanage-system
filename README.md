@@ -80,7 +80,7 @@
 
 ### 3. 模式分析 🎯
 - **模式統計**：三種模式的使用數據
-  - 🎯 一鍵生成模式：使用次數、成功率
+  - 🎯 一鍵生成模式：使用次數、完成率
   - 💬 AI顧問模式：對話數、平均對話輪數
   - 🎭 IP人設規劃模式：使用次數、生成Profile數
 - **時間分布圖**：柱狀圖顯示各時段使用情況
@@ -322,11 +322,19 @@ const API_BASE_URL = 'https://aivideobackend.zeabur.app/api';
 | 顯示欄位 | 資料表 | 計算方式 |
 |---------|--------|----------|
 | 一鍵生成模式使用次數 | conversation_summaries | COUNT(*) WHERE conversation_type = 'account_positioning' |
+| 一鍵生成模式完成率 | conversation_summaries + user_scripts | (有保存腳本的用戶數 / 進行過帳號定位對話的用戶數) × 100%<br>條件：腳本保存時間 >= 帳號定位對話時間 |
 | AI顧問對話數 | conversation_summaries | COUNT(*) WHERE conversation_type IN ('topic_selection', 'script_generation', 'general_consultation') |
-| IP人設規劃使用次數 | conversation_summaries | COUNT(*) WHERE conversation_type = 'ip_planning' |
-| 時間分布 | conversation_summaries | 按小時統計對話分布 |
+| AI顧問平均對話輪數 | conversation_summaries | 平均每個對話的消息數量（目前為 0，待實作） |
+| IP人設規劃使用次數 | conversation_summaries 或 long_term_memory | 優先從 conversation_summaries 統計<br>如果為 0，則從 long_term_memory 統計不重複的 session_id |
+| IP人設規劃生成Profile數 | long_term_memory | COUNT(DISTINCT user_id) WHERE conversation_type = 'ip_planning' |
+| 時間分布 | conversation_summaries | 按小時統計對話分布（最近30天） |
 
 **資料來源**：`GET /api/admin/mode-statistics`
+
+**詳細說明**：
+- **完成率**：統計進行過帳號定位對話的用戶中，有多少比例完成了整個流程（保存了腳本）。這表示用戶實際使用功能的比率。
+- **IP人設規劃使用次數**：如果 `conversation_summaries` 表沒有記錄，會從 `long_term_memory` 表統計會話數，因為 IP 人設規劃主要通過長期記憶 API 記錄。
+- **生成Profile數**：統計有 IP 人設規劃記錄的不重複用戶數，表示有多少用戶完成了 IP 人設規劃。
 
 ---
 
