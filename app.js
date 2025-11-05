@@ -466,7 +466,7 @@ function switchSection(section) {
         'long-term-memory': '長期記憶',
         'scripts': '腳本管理',
         'orders': '購買記錄',
-        'generations': '生成記錄',
+        // 'generations': '生成記錄', // 已隱藏
         'analytics': '數據分析'
     };
     document.getElementById('page-title').textContent = titles[section];
@@ -504,9 +504,9 @@ function loadSectionData(section) {
         case 'orders':
             loadOrders();
             break;
-        case 'generations':
-            loadGenerations();
-            break;
+        // case 'generations': // 已隱藏
+        //     loadGenerations();
+        //     break;
         case 'analytics':
             loadAnalytics();
             break;
