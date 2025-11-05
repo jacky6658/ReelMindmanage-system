@@ -2013,19 +2013,120 @@ document.addEventListener('click', function(event) {
 });
 
 // ===== 訂閱管理功能 =====
+// 儲存當前操作的用戶 ID
+let currentSubscriptionUserId = null;
+
 async function toggleSubscribe(userId, subscribe) {
+    currentSubscriptionUserId = userId;
+    
+    if (subscribe) {
+        // 啟用訂閱：顯示訂閱設置彈窗
+        showSubscriptionModal(userId);
+    } else {
+        // 取消訂閱：直接執行
+        if (confirm('確定要取消此用戶的訂閱嗎？')) {
+            await executeSubscriptionToggle(userId, false, null, null);
+        }
+    }
+}
+
+function showSubscriptionModal(userId) {
+    // 重置表單
+    document.querySelector('input[name="subscription-period"][value="monthly"]').checked = true;
+    document.getElementById('subscription-note').value = '';
+    
+    // 初始化樣式
+    setTimeout(() => {
+        initSubscriptionPeriodStyles();
+    }, 10);
+    
+    // 顯示彈窗
+    const modal = document.getElementById('subscription-modal');
+    modal.classList.add('active');
+}
+
+function updateSubscriptionPeriod(period) {
+    // 更新選中的樣式
+    const monthlyLabel = document.getElementById('subscription-monthly-label');
+    const yearlyLabel = document.getElementById('subscription-yearly-label');
+    
+    if (monthlyLabel && yearlyLabel) {
+        if (period === 'monthly') {
+            monthlyLabel.style.borderColor = '#3b82f6';
+            monthlyLabel.style.backgroundColor = '#eff6ff';
+            yearlyLabel.style.borderColor = '#e5e7eb';
+            yearlyLabel.style.backgroundColor = 'transparent';
+        } else {
+            yearlyLabel.style.borderColor = '#3b82f6';
+            yearlyLabel.style.backgroundColor = '#eff6ff';
+            monthlyLabel.style.borderColor = '#e5e7eb';
+            monthlyLabel.style.backgroundColor = 'transparent';
+        }
+    }
+}
+
+// 處理彈窗背景點擊關閉
+function handleModalClick(event, modalId) {
+    if (event.target.id === modalId) {
+        closeModal(modalId);
+    }
+}
+
+// 初始化訂閱期限選擇樣式
+function initSubscriptionPeriodStyles() {
+    updateSubscriptionPeriod();
+}
+
+async function confirmSubscription() {
+    if (!currentSubscriptionUserId) {
+        showToast('錯誤：找不到用戶ID', 'error');
+        return;
+    }
+    
+    // 獲取選中的訂閱期限
+    const selectedPeriod = document.querySelector('input[name="subscription-period"]:checked').value;
+    const subscriptionDays = selectedPeriod === 'yearly' ? 365 : 30;
+    
+    // 獲取備註
+    const note = document.getElementById('subscription-note').value.trim();
+    
+    // 關閉彈窗
+    closeModal('subscription-modal');
+    
+    // 執行訂閱啟用
+    await executeSubscriptionToggle(currentSubscriptionUserId, true, subscriptionDays, note);
+    
+    // 清除臨時變數
+    currentSubscriptionUserId = null;
+}
+
+async function executeSubscriptionToggle(userId, subscribe, subscriptionDays, note) {
     try {
+        const requestBody = {
+            is_subscribed: subscribe
+        };
+        
+        // 如果啟用訂閱，添加期限和備註
+        if (subscribe && subscriptionDays) {
+            requestBody.subscription_days = subscriptionDays;
+            if (note) {
+                requestBody.admin_note = note;
+            }
+        }
+        
         const response = await adminFetch(`${API_BASE_URL}/admin/users/${userId}/subscription`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ is_subscribed: subscribe })
+            body: JSON.stringify(requestBody)
         });
         
         if (response.ok) {
             const result = await response.json();
-            showToast(subscribe ? '已啟用訂閱' : '已取消訂閱', 'success');
+            const periodText = subscribe && subscriptionDays === 365 ? '年費' : subscribe && subscriptionDays === 30 ? '月費' : '';
+            const message = subscribe ? `已啟用訂閱${periodText ? `（${periodText}）` : ''}` : '已取消訂閱';
+            showToast(message, 'success');
             
             // 更新 UI
             updateSubscribeUI(userId, subscribe);
