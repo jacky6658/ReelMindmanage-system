@@ -1026,7 +1026,7 @@ async function loadModes() {
         const mode3 = data.mode_stats.mode3_ip_planning;
         
         document.getElementById('mode1-count').textContent = mode1.count || 0;
-        document.getElementById('mode1-success').textContent = mode1.success_rate ? `${mode1.success_rate}%` : '0%';
+        document.getElementById('mode1-completion').textContent = mode1.completion_rate ? `${mode1.completion_rate}%` : '0%';
         document.getElementById('mode2-count').textContent = mode2.count || 0;
         document.getElementById('mode2-avg').textContent = mode2.avg_turns ? `${mode2.avg_turns}` : '0';
         document.getElementById('mode3-count').textContent = mode3.count || 0;
