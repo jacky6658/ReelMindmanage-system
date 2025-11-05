@@ -2022,37 +2022,65 @@ async function loadIpPlanningResults() {
             return;
         }
         
+        // 按用戶分組
+        const groupedByUser = {};
+        results.forEach((result, index) => {
+            const userId = result.user_id;
+            if (!groupedByUser[userId]) {
+                groupedByUser[userId] = {
+                    user_id: userId,
+                    user_name: result.user_name || '未知用戶',
+                    user_email: result.user_email || '',
+                    results: []
+                };
+            }
+            groupedByUser[userId].results.push({ ...result, originalIndex: index });
+        });
+        
+        const userList = Object.values(groupedByUser);
+        
         if (isMobile) {
-            // 手機版：卡片式佈局
+            // 手機版：按用戶分組的卡片式佈局
             setHTML(tableContainer, '');
             const cardsContainer = document.createElement('div');
             cardsContainer.className = 'mobile-cards-container';
             
-            cardsContainer.innerHTML = results.map((result, index) => {
-                const typeName = result.result_type === 'profile' ? 'IP Profile' : 
-                                result.result_type === 'plan' ? '14天規劃' : '今日腳本';
-                const contentPreview = (result.content || '').replace(/<[^>]*>/g, '').substring(0, 100);
+            cardsContainer.innerHTML = userList.map((userGroup, groupIndex) => {
+                const userResults = userGroup.results;
+                const totalCount = userResults.length;
                 
                 return `
-                <div class="mobile-card">
-                    <div class="mobile-card-header">
-                        <span class="mobile-card-title">${result.title || typeName}</span>
-                        <span class="mobile-card-badge">${typeName}</span>
+                <div class="mobile-card" style="margin-bottom: 16px;">
+                    <div class="mobile-card-header" onclick="toggleUserIpPlanningResults(${groupIndex})" style="cursor: pointer;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <div>
+                                <span class="mobile-card-title">${userGroup.user_name}</span>
+                                <span style="font-size: 0.85rem; color: #6B7280; margin-left: 8px;">(${totalCount} 筆記錄)</span>
+                            </div>
+                            <span id="user-toggle-${groupIndex}" style="font-size: 1.2rem;">▼</span>
+                        </div>
+                        ${userGroup.user_email ? `<div style="font-size: 0.85rem; color: #9CA3AF; margin-top: 4px;">${userGroup.user_email}</div>` : ''}
                     </div>
-                    <div class="mobile-card-row">
-                        <span class="mobile-card-label">用戶</span>
-                        <span class="mobile-card-value">${result.user_name || result.user_id.substring(0, 16)}...</span>
-                    </div>
-                    <div class="mobile-card-row">
-                        <span class="mobile-card-label">內容預覽</span>
-                        <span class="mobile-card-value">${contentPreview}...</span>
-                    </div>
-                    <div class="mobile-card-row">
-                        <span class="mobile-card-label">時間</span>
-                        <span class="mobile-card-value">${formatDate(result.created_at)}</span>
-                    </div>
-                    <div class="mobile-card-actions">
-                        <button class="btn-action btn-view" onclick="viewIpPlanningResultByIdx(${index})" type="button">查看詳情</button>
+                    <div id="user-results-${groupIndex}" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid #E5E7EB;">
+                        ${userResults.map((result, idx) => {
+                            const typeName = result.result_type === 'profile' ? 'IP Profile' : 
+                                            result.result_type === 'plan' ? '14天規劃' : '今日腳本';
+                            const contentPreview = (result.content || '').replace(/<[^>]*>/g, '').substring(0, 80);
+                            
+                            return `
+                            <div style="background: #F9FAFB; padding: 12px; border-radius: 6px; margin-bottom: 8px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                    <span style="font-weight: 600; color: #1F2937;">${result.title || typeName}</span>
+                                    <span style="font-size: 0.8rem; color: #6B7280;">${formatDate(result.created_at)}</span>
+                                </div>
+                                <div style="font-size: 0.85rem; color: #6B7280; margin-bottom: 8px;">
+                                    <span class="badge" style="background: #3B82F6; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem;">${typeName}</span>
+                                </div>
+                                <div style="font-size: 0.85rem; color: #4B5563; margin-bottom: 8px;">${contentPreview}...</div>
+                                <button class="btn-action btn-view" onclick="viewIpPlanningResultByIdx(${result.originalIndex})" type="button" style="padding: 4px 12px; font-size: 0.85rem;">查看詳情</button>
+                            </div>
+                        `;
+                        }).join('')}
                     </div>
                 </div>
             `;
@@ -2060,25 +2088,49 @@ async function loadIpPlanningResults() {
             
             tableContainer.appendChild(cardsContainer);
         } else {
-            // 桌面版：表格佈局
+            // 桌面版：按用戶分組的可展開視窗
             const tbody = await waitFor('#ip-planning-table-body', 8000).catch(() => null);
             if (!tbody) return;
             
-            setHTML(tbody, results.map((result, index) => {
-                const typeName = result.result_type === 'profile' ? 'IP Profile' : 
-                                result.result_type === 'plan' ? '14天規劃' : '今日腳本';
-                const contentPreview = (result.content || '').replace(/<[^>]*>/g, '').substring(0, 150);
+            setHTML(tbody, userList.map((userGroup, groupIndex) => {
+                const userResults = userGroup.results;
+                const totalCount = userResults.length;
                 
                 return `
-                <tr>
-                    <td>${result.id}</td>
-                    <td>${result.user_name || result.user_id.substring(0, 12)}...</td>
-                    <td><span class="badge">${typeName}</span></td>
-                    <td>${result.title || '-'}</td>
-                    <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${contentPreview}">${contentPreview}...</td>
-                    <td>${formatDate(result.created_at)}</td>
-                    <td>
-                        <button class="btn-action btn-view" onclick="viewIpPlanningResultByIdx(${index})" type="button">查看詳情</button>
+                <tr class="user-group-header" onclick="toggleUserIpPlanningResults(${groupIndex})" style="cursor: pointer; background: #F9FAFB; font-weight: 600;">
+                    <td colspan="7" style="padding: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <span>${userGroup.user_name}</span>
+                                ${userGroup.user_email ? `<span style="color: #6B7280; font-weight: normal; margin-left: 12px;">${userGroup.user_email}</span>` : ''}
+                                <span style="color: #3B82F6; font-weight: normal; margin-left: 12px;">(${totalCount} 筆記錄)</span>
+                            </div>
+                            <span id="user-toggle-${groupIndex}">▼</span>
+                        </div>
+                    </td>
+                </tr>
+                <tr class="user-group-results" id="user-results-${groupIndex}" style="display: none;">
+                    <td colspan="7" style="padding: 0;">
+                        <div style="padding: 16px; background: #FEFEFE;">
+                            ${userResults.map((result, idx) => {
+                                const typeName = result.result_type === 'profile' ? 'IP Profile' : 
+                                                result.result_type === 'plan' ? '14天規劃' : '今日腳本';
+                                const contentPreview = (result.content || '').replace(/<[^>]*>/g, '').substring(0, 150);
+                                
+                                return `
+                                <div style="display: grid; grid-template-columns: 60px 120px 150px 200px 1fr 150px 120px; gap: 12px; padding: 12px; border-bottom: 1px solid #E5E7EB; align-items: center;">
+                                    <div style="color: #6B7280; font-size: 0.9rem;">${result.id}</div>
+                                    <div><span class="badge">${typeName}</span></div>
+                                    <div style="font-weight: 500; color: #1F2937;">${result.title || '-'}</div>
+                                    <div style="color: #4B5563; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${contentPreview}">${contentPreview}...</div>
+                                    <div style="color: #6B7280; font-size: 0.85rem;">${formatDate(result.created_at)}</div>
+                                    <div>
+                                        <button class="btn-action btn-view" onclick="viewIpPlanningResultByIdx(${result.originalIndex})" type="button" style="padding: 4px 12px; font-size: 0.85rem;">查看詳情</button>
+                                    </div>
+                                </div>
+                            `;
+                            }).join('')}
+                        </div>
                     </td>
                 </tr>
             `;
@@ -2087,10 +2139,27 @@ async function loadIpPlanningResults() {
         
         // 保存結果數據供查看功能使用
         window.allIpPlanningResults = results;
+        window.userIpPlanningGroups = userList;
         
     } catch (error) {
         console.error('載入 IP 人設規劃結果失敗:', error);
         showToast('載入 IP 人設規劃結果失敗', 'error');
+    }
+}
+
+// 切換用戶結果展開/收起
+function toggleUserIpPlanningResults(groupIndex) {
+    const resultsDiv = document.getElementById(`user-results-${groupIndex}`);
+    const toggleSpan = document.getElementById(`user-toggle-${groupIndex}`);
+    
+    if (resultsDiv && toggleSpan) {
+        if (resultsDiv.style.display === 'none') {
+            resultsDiv.style.display = '';
+            toggleSpan.textContent = '▲';
+        } else {
+            resultsDiv.style.display = 'none';
+            toggleSpan.textContent = '▼';
+        }
     }
 }
 
