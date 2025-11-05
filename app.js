@@ -1504,38 +1504,66 @@ function viewScriptByIdx(index) {
     
     // 打開彈窗
     const modal = document.getElementById('script-modal');
+    if (!modal) {
+        console.error('找不到腳本詳情彈窗元素');
+        showToast('無法顯示腳本詳情：缺少必要的UI元素', 'error');
+        return;
+    }
+    
     modal.classList.add('active');
     
     // 顯示載入中
     const content = document.getElementById('script-detail-content');
-    content.innerHTML = '<p>載入腳本詳情中...</p>';
+    if (!content) {
+        console.error('找不到腳本詳情內容元素');
+        modal.classList.remove('active');
+        return;
+    }
+    
+    content.innerHTML = '<p style="text-align: center; padding: 2rem;">載入腳本詳情中...</p>';
     
     // 渲染腳本內容
     setTimeout(() => {
+        const scriptTitle = script.title || script.name || '未命名腳本';
+        const scriptPlatform = script.platform || '未設定';
+        const scriptCategory = script.category || script.topic || '未分類';
+        const scriptContent = script.content || script.script_content || '無內容';
+        const userId = script.user_id || '未知';
+        const userName = script.user_name || '未知用戶';
+        const userEmail = script.user_email || '';
+        
         content.innerHTML = `
-            <div class="script-detail">
-                <div class="script-info">
-                    <div class="script-info-item">
-                        <span class="script-info-label">腳本標題</span>
-                        <span class="script-info-value">${script.title}</span>
-                    </div>
-                    <div class="script-info-item">
-                        <span class="script-info-label">平台</span>
-                        <span class="script-info-value">${script.platform}</span>
-                    </div>
-                    <div class="script-info-item">
-                        <span class="script-info-label">分類</span>
-                        <span class="script-info-value">${script.category}</span>
-                    </div>
-                    <div class="script-info-item">
-                        <span class="script-info-label">創建時間</span>
-                        <span class="script-info-value">${formatDate(script.created_at)}</span>
+            <div style="padding: 1rem;">
+                <div style="padding: 12px; background: #f8fafc; border-radius: 8px; margin-bottom: 16px;">
+                    <p style="margin: 4px 0;"><strong>用戶：</strong>${escapeHtml(userName)} <span style="color: #64748b;">${escapeHtml(userEmail)}</span></p>
+                    <p style="margin: 4px 0;"><strong>用戶ID：</strong><span style="font-family: monospace; color: #64748b;">${escapeHtml(userId)}</span></p>
+                    <p style="margin: 4px 0;"><strong>腳本ID：</strong>${script.id}</p>
+                </div>
+                
+                <div style="padding: 12px; background: #f8fafc; border-radius: 8px; margin-bottom: 16px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <span style="color: #64748b; font-size: 0.9em;">腳本標題</span>
+                            <p style="margin: 4px 0 0 0; font-weight: 600; color: #1e293b;">${escapeHtml(scriptTitle)}</p>
+                        </div>
+                        <div>
+                            <span style="color: #64748b; font-size: 0.9em;">平台</span>
+                            <p style="margin: 4px 0 0 0; color: #1e293b;">${escapeHtml(scriptPlatform)}</p>
+                        </div>
+                        <div>
+                            <span style="color: #64748b; font-size: 0.9em;">分類</span>
+                            <p style="margin: 4px 0 0 0; color: #1e293b;">${escapeHtml(scriptCategory)}</p>
+                        </div>
+                        <div>
+                            <span style="color: #64748b; font-size: 0.9em;">創建時間</span>
+                            <p style="margin: 4px 0 0 0; color: #1e293b;">${formatDate(script.created_at)}</p>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="script-content">
-                    <h4>📝 腳本內容</h4>
-                    <div class="script-text">${script.content || '無內容'}</div>
+                <div style="padding: 16px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;">
+                    <h4 style="margin: 0 0 12px 0; color: #1e293b;">📝 腳本內容</h4>
+                    <div style="color: #64748b; line-height: 1.6; white-space: pre-wrap; max-height: 500px; overflow-y: auto; padding: 12px; background: #f8fafc; border-radius: 4px;">${escapeHtml(scriptContent)}</div>
                 </div>
             </div>
         `;
@@ -1548,12 +1576,26 @@ function viewScript(scriptId, scriptContent, scriptTitle) {
 }
 
 // 刪除腳本
-function deleteScript(scriptId) {
-    if (confirm('確定要刪除這個腳本嗎？')) {
-        alert(`刪除腳本\n腳本ID: ${scriptId}`);
-        showToast('腳本已刪除', 'success');
-        // TODO: 實現真實的刪除API調用
-        // loadScripts(); // 重新載入列表
+async function deleteScript(scriptId) {
+    if (!confirm('確定要刪除這個腳本嗎？此操作無法復原。')) {
+        return;
+    }
+    
+    try {
+        const response = await adminFetch(`${API_BASE_URL}/admin/scripts/${scriptId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showToast('腳本已刪除', 'success');
+            loadScripts(); // 重新載入列表
+        } else {
+            const error = await response.json();
+            showToast(error.error || '刪除失敗', 'error');
+        }
+    } catch (error) {
+        console.error('刪除腳本失敗:', error);
+        showToast('刪除腳本失敗', 'error');
     }
 }
 

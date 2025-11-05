@@ -401,6 +401,19 @@
         </div>
     </div>
 
+    <!-- 腳本詳情彈窗 -->
+    <div class="modal" id="script-modal" onclick="handleModalClick(event, 'script-modal')">
+        <div class="modal-content" style="max-width: 800px;" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>腳本詳情</h3>
+                <button class="modal-close" onclick="closeModal('script-modal')">✕</button>
+            </div>
+            <div class="modal-body" id="script-detail-content">
+                <!-- 腳本內容將在這裡載入 -->
+            </div>
+        </div>
+    </div>
+
     <!-- 訂閱設置彈窗 -->
     <div class="modal" id="subscription-modal" onclick="handleModalClick(event, 'subscription-modal')">
         <div class="modal-content" style="max-width: 500px;" onclick="event.stopPropagation()">
