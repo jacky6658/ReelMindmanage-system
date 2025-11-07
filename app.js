@@ -4,6 +4,37 @@ const API_BASE_URL = 'https://aivideobackend.zeabur.app/api';
 // 全域變數
 let charts = {};
 
+// ===== CSRF Token 管理 =====
+let csrfTokenCache = null;
+
+async function getCsrfToken() {
+    // 如果已有緩存的 Token，直接返回
+    if (csrfTokenCache) return csrfTokenCache;
+    
+    try {
+        const token = getAdminToken();
+        if (!token) return null; // 未登入，不需要 CSRF Token
+        
+        const res = await fetch(`${API_BASE_URL}/csrf-token`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            csrfTokenCache = data.csrf_token;
+            return csrfTokenCache;
+        }
+    } catch (e) {
+        console.warn('獲取 CSRF Token 失敗:', e);
+    }
+    return null;
+}
+
+function clearCsrfToken() {
+    csrfTokenCache = null;
+}
+
 // ===== 管理員認證機制 =====
 // 從 localStorage 讀取管理員 token
 function getAdminToken() {
@@ -13,8 +44,12 @@ function getAdminToken() {
 function setAdminToken(token) {
     if (token) {
         localStorage.setItem('adminToken', token);
+        // Token 改變時，清除 CSRF Token 緩存（需要重新獲取）
+        clearCsrfToken();
     } else {
         localStorage.removeItem('adminToken');
+        // 清除 Token 時，也清除 CSRF Token 緩存
+        clearCsrfToken();
     }
 }
 
@@ -68,7 +103,7 @@ function isTokenExpiringSoon(token) {
 // 登出功能
 function logout() {
     if (confirm('確定要登出嗎？')) {
-        // 清除 token
+        // 清除 token（setAdminToken 會自動清除 CSRF Token 緩存）
         setAdminToken('');
         
         // 清除任何其他相關的 localStorage 數據
@@ -84,7 +119,7 @@ function logout() {
 
 // 強制登出並清除所有狀態
 function forceLogout(reason = '登入已過期，請重新登入') {
-    // 清除 token
+    // 清除 token（setAdminToken 會自動清除 CSRF Token 緩存）
     setAdminToken('');
     
     // 清除任何其他相關的 localStorage 數據（如果需要）
@@ -98,7 +133,7 @@ function forceLogout(reason = '登入已過期，請重新登入') {
     // 可以實作一個請求取消機制
 }
 
-// 統一的 fetch 函數，自動帶上 Authorization header
+// 統一的 fetch 函數，自動帶上 Authorization header 和 CSRF Token
 async function adminFetch(url, options = {}) {
     // 使用統一的 token 狀態檢查
     if (!checkTokenStatus()) {
@@ -113,8 +148,46 @@ async function adminFetch(url, options = {}) {
         'Authorization': `Bearer ${token}`
     };
     
+    // 為 POST/PUT/DELETE/PATCH 請求添加 CSRF Token
+    const method = (options.method || 'GET').toUpperCase();
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+        // 檢查是否已提供 CSRF Token（允許手動覆寫）
+        if (!headers['X-CSRF-Token'] && !headers['x-csrf-token']) {
+            const csrfToken = await getCsrfToken();
+            if (csrfToken) {
+                headers['X-CSRF-Token'] = csrfToken;
+            }
+        }
+    }
+    
     try {
         const response = await fetch(url, { ...options, headers });
+        
+        // 處理 403 錯誤（可能是 CSRF Token 驗證失敗）
+        if (response.status === 403) {
+            try {
+                const errorData = await response.clone().json();
+                if (errorData.error && (errorData.error.includes('CSRF') || errorData.error.includes('csrf'))) {
+                    // CSRF Token 驗證失敗，清除緩存並重新獲取
+                    clearCsrfToken();
+                    const csrfToken = await getCsrfToken();
+                    if (csrfToken) {
+                        // 重試請求
+                        const retryHeaders = {
+                            ...options.headers,
+                            'Authorization': `Bearer ${token}`,
+                            'X-CSRF-Token': csrfToken
+                        };
+                        const retryResponse = await fetch(url, { ...options, headers: retryHeaders });
+                        if (retryResponse.ok) {
+                            return retryResponse;
+                        }
+                    }
+                }
+            } catch (e) {
+                // 如果無法解析 JSON，繼續處理
+            }
+        }
         
         // 如果收到 401 或 403，清除 token 並顯示登入提示
         if (response.status === 401 || response.status === 403) {
@@ -123,8 +196,8 @@ async function adminFetch(url, options = {}) {
             // 嘗試從回應中獲取錯誤訊息
             try {
                 const errorData = await response.clone().json();
-                if (errorData.detail) {
-                    errorMessage = errorData.detail;
+                if (errorData.detail || errorData.error) {
+                    errorMessage = errorData.detail || errorData.error;
                 }
             } catch (e) {
                 // 如果無法解析 JSON，使用預設訊息
@@ -307,6 +380,12 @@ function showLoginRequired(message = '請選擇登入方式') {
                 setAdminToken(data.access_token);
                 // 保存登入時間
                 localStorage.setItem('admin_login_time', new Date().toISOString());
+                // 登入成功後，預先獲取 CSRF Token（在頁面重新載入前）
+                try {
+                    await getCsrfToken();
+                } catch (e) {
+                    console.warn('預先獲取 CSRF Token 失敗:', e);
+                }
                 modal.remove();
                 location.reload();
             } else {
@@ -339,6 +418,12 @@ function checkAdminAuth() {
         setAdminToken(tokenFromUrl);
         // 保存登入時間
         localStorage.setItem('admin_login_time', new Date().toISOString());
+        // OAuth 登入成功後，預先獲取 CSRF Token（在頁面重新載入前）
+        try {
+            await getCsrfToken();
+        } catch (e) {
+            console.warn('預先獲取 CSRF Token 失敗:', e);
+        }
         // 清除 URL 參數並重新載入
         window.history.replaceState({}, document.title, window.location.pathname);
         location.reload();
