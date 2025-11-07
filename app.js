@@ -931,10 +931,23 @@ async function viewUser(userId) {
                 day: '2-digit'
             }) : '未知';
             
+            // 訂閱來源顯示
+            let sourceDisplay = '未知';
+            if (licenseData.source) {
+                const sourceMap = {
+                    'portaly': 'Portaly',
+                    'ppa': 'PPA',
+                    'ecpay': '官網購買',
+                    'admin': '管理員手動啟用'
+                };
+                sourceDisplay = sourceMap[licenseData.source] || licenseData.source;
+            }
+            
             content += `<div style="margin-top: 16px; padding: 12px; background: #f0f9ff; border-radius: 8px;">`;
             content += `<h4 style="margin-bottom: 8px;">🔑 授權資訊</h4>`;
-            content += `<p><strong>等級：</strong>${licenseData.tier}</p>`;
+            content += `<p><strong>等級：</strong>${licenseData.tier === 'yearly' ? '年費' : licenseData.tier === 'monthly' ? '月費' : licenseData.tier}</p>`;
             content += `<p><strong>席次：</strong>${licenseData.seats || 1}</p>`;
+            content += `<p><strong>訂閱來源：</strong><span style="color: #0f3dde; font-weight: 600;">${sourceDisplay}</span></p>`;
             content += `<p><strong>到期時間：</strong>${expiresAt}</p>`;
             content += `<p><strong>狀態：</strong>${licenseData.status === 'active' ? '✅ 有效' : '❌ 已過期'}</p>`;
             content += `</div>`;
@@ -949,6 +962,7 @@ async function viewUser(userId) {
             content += `<th style="padding: 8px; text-align: left;">訂單編號</th>`;
             content += `<th style="padding: 8px; text-align: left;">方案</th>`;
             content += `<th style="padding: 8px; text-align: left;">金額</th>`;
+            content += `<th style="padding: 8px; text-align: left;">付款方式/通路</th>`;
             content += `<th style="padding: 8px; text-align: left;">狀態</th>`;
             content += `<th style="padding: 8px; text-align: left;">付款時間</th>`;
             content += `</tr></thead><tbody>`;
@@ -963,10 +977,26 @@ async function viewUser(userId) {
                     minute: '2-digit'
                 }) : '-';
                 
+                // 付款方式/通路顯示
+                let paymentMethodDisplay = '-';
+                if (order.payment_method) {
+                    const methodMap = {
+                        'portaly': '🔗 Portaly',
+                        'ppa': '🔗 PPA',
+                        'ecpay': '💳 官網購買',
+                        'Credit': '💳 官網購買（信用卡）',
+                        'ATM': '💳 官網購買（ATM）',
+                        'CVS': '💳 官網購買（超商）',
+                        'BARCODE': '💳 官網購買（條碼）'
+                    };
+                    paymentMethodDisplay = methodMap[order.payment_method] || order.payment_method;
+                }
+                
                 content += `<tr>`;
                 content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.order_id || order.id}</td>`;
                 content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.plan_type === 'monthly' ? '月費' : '年費'}</td>`;
                 content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">NT$${order.amount?.toLocaleString() || 0}</td>`;
+                content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${paymentMethodDisplay}</td>`;
                 content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.payment_status === 'paid' ? '✅ 已付款' : '⏳ 待付款'}</td>`;
                 content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${paidDate}</td>`;
                 content += `</tr>`;
@@ -3076,5 +3106,4 @@ async function deleteLicenseActivation(activationId) {
         console.error('刪除授權記錄失敗:', error);
         showToast('刪除授權記錄失敗', 'error');
     }
-}
 }
