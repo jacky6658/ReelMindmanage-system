@@ -71,6 +71,10 @@
                     <span class="icon">💳</span>
                     <span>購買記錄</span>
                 </a>
+                <a href="#" class="nav-item" data-section="license-activations">
+                    <span class="icon">🔗</span>
+                    <span>授權記錄</span>
+                </a>
                 <a href="#" class="nav-item" data-section="generations" style="display: none;">
                     <span class="icon">✨</span>
                     <span>生成記錄</span>
@@ -387,6 +391,28 @@
                     <button class="btn-export" onclick="exportCSV('orders')">📥 匯出 CSV</button>
                 </div>
                 <div class="stats-grid" style="margin-bottom: 20px;"></div>
+                <div class="table-container"></div>
+            </div>
+
+            <!-- 授權記錄頁面 -->
+            <div class="section" id="license-activations">
+                <div class="section-header">
+                    <h2>授權記錄</h2>
+                    <div class="filters">
+                        <select id="activation-filter-status" onchange="loadLicenseActivations()">
+                            <option value="">所有狀態</option>
+                            <option value="pending">待啟用</option>
+                            <option value="activated">已啟用</option>
+                            <option value="expired">已過期</option>
+                        </select>
+                        <select id="activation-filter-channel" onchange="loadLicenseActivations()">
+                            <option value="">所有通路</option>
+                            <option value="n8n">n8n</option>
+                            <option value="portaly">Portaly</option>
+                            <option value="ppa">PPA</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="table-container"></div>
             </div>
 

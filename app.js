@@ -531,6 +531,9 @@ function loadSectionData(section) {
         case 'orders':
             loadOrders();
             break;
+        case 'license-activations':
+            loadLicenseActivations();
+            break;
         // case 'generations': // 已隱藏
         //     loadGenerations();
         //     break;
@@ -2941,37 +2944,137 @@ async function loadOrders() {
         const totalRevenue = allOrders.filter(o => o.payment_status === 'paid').reduce((sum, o) => sum + (o.amount || 0), 0);
         const paidCount = allOrders.filter(o => o.payment_status === 'paid').length;
         const pendingCount = allOrders.filter(o => o.payment_status !== 'paid').length;
-        
-        // 更新統計卡片（如果存在）
-        const statsContainer = document.querySelector('#orders .stats-grid');
-        if (statsContainer) {
-            statsContainer.innerHTML = `
-                <div class="stat-card">
-                    <div class="stat-icon">💳</div>
-                    <div class="stat-value">${allOrders.length}</div>
-                    <div class="stat-label">總訂單數</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">✅</div>
-                    <div class="stat-value">${paidCount}</div>
-                    <div class="stat-label">已付款</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">⏳</div>
-                    <div class="stat-value">${pendingCount}</div>
-                    <div class="stat-label">待付款</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon">💰</div>
-                    <div class="stat-value">NT$${totalRevenue.toLocaleString()}</div>
-                    <div class="stat-label">總營收</div>
-                </div>
-            `;
-        }
-        
-        showToast(`已載入 ${allOrders.length} 筆訂單記錄`, 'success');
     } catch (error) {
         console.error('載入訂單失敗:', error);
         showToast('載入訂單失敗', 'error');
     }
+}
+
+// ===== 授權記錄管理 =====
+async function loadLicenseActivations() {
+    try {
+        const statusFilter = document.getElementById('activation-filter-status')?.value || '';
+        const channelFilter = document.getElementById('activation-filter-channel')?.value || '';
+        
+        let url = `${API_BASE_URL}/admin/license-activations?limit=100`;
+        if (statusFilter) url += `&status=${statusFilter}`;
+        if (channelFilter) url += `&channel=${channelFilter}`;
+        
+        const response = await adminFetch(url);
+        const data = await response.json();
+        const activations = data.activations || [];
+        
+        console.log('授權記錄數據:', activations);
+        
+        const tableContainer = await waitFor('#license-activations .table-container', 8000).catch(() => null);
+        if (!tableContainer) {
+            console.error('找不到授權記錄表格容器');
+            return;
+        }
+        
+        // 生成表格HTML
+        let tableHTML = `
+            <div class="table-wrapper">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>授權 Token</th>
+                            <th>通路</th>
+                            <th>訂單編號</th>
+                            <th>Email</th>
+                            <th>方案</th>
+                            <th>金額</th>
+                            <th>狀態</th>
+                            <th>連結到期日</th>
+                            <th>授權到期日</th>
+                            <th>啟用時間</th>
+                            <th>創建時間</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        activations.forEach(activation => {
+            const statusBadge = {
+                'pending': '<span class="badge badge-warning">待啟用</span>',
+                'activated': '<span class="badge badge-success">已啟用</span>',
+                'expired': '<span class="badge badge-danger">已過期</span>'
+            }[activation.status] || '<span class="badge">未知</span>';
+            
+            const formatDate = (dateStr) => {
+                if (!dateStr) return '-';
+                try {
+                    return new Date(dateStr).toLocaleString('zh-TW', {
+                        timeZone: 'Asia/Taipei',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                } catch (e) {
+                    return dateStr;
+                }
+            };
+            
+            tableHTML += `
+                <tr>
+                    <td>${activation.id}</td>
+                    <td><code style="font-size: 0.85rem;">${activation.activation_token || '-'}</code></td>
+                    <td>${activation.channel || '-'}</td>
+                    <td>${activation.order_id || '-'}</td>
+                    <td>${activation.email || '-'}</td>
+                    <td>${activation.plan_type === 'monthly' ? '月費' : '年費'}</td>
+                    <td>NT$${activation.amount?.toLocaleString() || 0}</td>
+                    <td>${statusBadge}</td>
+                    <td>${formatDate(activation.link_expires_at)}</td>
+                    <td>${formatDate(activation.license_expires_at)}</td>
+                    <td>${formatDate(activation.activated_at)}</td>
+                    <td>${formatDate(activation.created_at)}</td>
+                    <td>
+                        <button class="btn-action btn-danger" onclick="deleteLicenseActivation(${activation.id})" type="button">
+                            🗑️ 刪除
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        tableHTML += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        setHTML(tableContainer, tableHTML);
+    } catch (error) {
+        console.error('載入授權記錄失敗:', error);
+        showToast('載入授權記錄失敗', 'error');
+    }
+}
+
+async function deleteLicenseActivation(activationId) {
+    if (!confirm('確定要刪除這筆授權記錄嗎？此操作無法復原。')) {
+        return;
+    }
+    
+    try {
+        const response = await adminFetch(`${API_BASE_URL}/admin/license-activations/${activationId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showToast('授權記錄已刪除', 'success');
+            loadLicenseActivations(); // 重新載入列表
+        } else {
+            const error = await response.json();
+            showToast(error.error || '刪除失敗', 'error');
+        }
+    } catch (error) {
+        console.error('刪除授權記錄失敗:', error);
+        showToast('刪除授權記錄失敗', 'error');
+    }
+}
 }
