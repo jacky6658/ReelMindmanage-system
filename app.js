@@ -100,19 +100,13 @@ function forceLogout(reason = '登入已過期，請重新登入') {
 
 // 統一的 fetch 函數，自動帶上 Authorization header
 async function adminFetch(url, options = {}) {
-    const token = getAdminToken();
-    
-    // 檢查 token 是否存在
-    if (!token) {
-        forceLogout('請先登入');
+    // 使用統一的 token 狀態檢查
+    if (!checkTokenStatus()) {
+        // checkTokenStatus 已經處理了顯示登入視窗的邏輯
         throw new Error('需要登入');
     }
     
-    // 檢查 token 是否過期
-    if (isTokenExpired(token)) {
-        forceLogout('登入已過期，請重新登入');
-        throw new Error('Token 已過期');
-    }
+    const token = getAdminToken();
     
     const headers = {
         ...options.headers,
@@ -351,46 +345,51 @@ function checkAdminAuth() {
         return;
     }
     
-    // 檢查是否有儲存的 token
-    const token = getAdminToken();
-    if (!token) {
-        // 如果 URL 中有 admin_login 參數但沒有 token，可能是正在進行 OAuth 流程
-        if (adminLogin) {
-            // 等待 OAuth callback，不要顯示登入提示
-            return;
-        }
-        showLoginRequired();
+    // 如果 URL 中有 admin_login 參數但沒有 token，可能是正在進行 OAuth 流程
+    if (adminLogin) {
+        // 等待 OAuth callback，不要顯示登入提示
         return;
     }
     
-    // 檢查 token 是否過期
-    if (isTokenExpired(token)) {
-        forceLogout('登入已過期，請重新登入');
+    // 使用統一的 token 狀態檢查函數
+    if (!checkTokenStatus()) {
+        // checkTokenStatus 已經處理了顯示登入視窗的邏輯
         return;
-    }
-    
-    // 檢查 token 是否即將過期（提前提醒）
-    if (isTokenExpiringSoon(token)) {
-        // 可以選擇顯示一個非阻塞的提醒，但不在這裡實作
-        // 因為這可能會在每次檢查時都顯示，造成干擾
     }
 }
 
-// 定期檢查 token 狀態（每分鐘檢查一次）
+// 定期檢查 token 狀態（每 30 秒檢查一次，更快檢測過期）
 function startTokenMonitor() {
+    // 立即檢查一次（不等待第一個間隔）
+    checkTokenStatus();
+    
+    // 然後每 30 秒檢查一次
     setInterval(() => {
-        const token = getAdminToken();
-        if (token) {
-            // 檢查是否過期
-            if (isTokenExpired(token)) {
-                forceLogout('登入已過期，請重新登入');
-            } else if (isTokenExpiringSoon(token)) {
-                // Token 即將過期，可以顯示一個非阻塞的提醒
-                // 這裡選擇不顯示，避免干擾用戶操作
-                // 如果需要，可以在這裡顯示一個頂部橫幅提醒
-            }
+        checkTokenStatus();
+    }, 30000); // 每 30 秒檢查一次
+}
+
+// 檢查 token 狀態的統一函數
+function checkTokenStatus() {
+    const token = getAdminToken();
+    if (token) {
+        // 檢查是否過期
+        if (isTokenExpired(token)) {
+            forceLogout('登入已過期，請重新登入');
+            return false;
+        } else if (isTokenExpiringSoon(token)) {
+            // Token 即將過期，可以顯示一個非阻塞的提醒
+            // 這裡選擇不顯示，避免干擾用戶操作
+            // 如果需要，可以在這裡顯示一個頂部橫幅提醒
         }
-    }, 60000); // 每分鐘檢查一次
+        return true;
+    } else {
+        // 沒有 token，顯示登入視窗
+        if (!document.getElementById('login-required-modal')) {
+            showLoginRequired('請先登入');
+        }
+        return false;
+    }
 }
 
 // 定期更新最近活動（每30秒更新一次）
@@ -436,7 +435,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // 檢查管理員認證
     checkAdminAuth();
     
-    // 啟動 token 監控（每分鐘檢查一次）
+    // 啟動 token 監控（每 30 秒檢查一次，更快檢測過期）
     startTokenMonitor();
     
     // 啟動活動監控（每30秒更新一次）
@@ -473,6 +472,12 @@ function initializeNavigation() {
 }
 
 function switchSection(section) {
+    // 在切換頁面前檢查 token 狀態
+    if (!checkTokenStatus()) {
+        // Token 已過期或無效，登入視窗已顯示，不執行後續操作
+        return;
+    }
+    
     // 更新導航狀態
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.remove('active');
@@ -567,6 +572,12 @@ function updateTime() {
 
 // 重新整理數據
 function refreshData() {
+    // 在重新整理前檢查 token 狀態
+    if (!checkTokenStatus()) {
+        // Token 已過期或無效，登入視窗已顯示，不執行後續操作
+        return;
+    }
+    
     const activeSection = document.querySelector('.section.active').id;
     loadSectionData(activeSection);
     showToast('數據已重新整理', 'success');
