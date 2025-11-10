@@ -408,7 +408,7 @@ function showLoginRequired(message = '請選擇登入方式') {
 }
 
 // 檢查是否需要登入
-function checkAdminAuth() {
+async function checkAdminAuth() {
     // 檢查 URL 參數中是否有 token（來自 OAuth callback）
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get('token') || urlParams.get('access_token');
