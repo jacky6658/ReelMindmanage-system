@@ -3040,19 +3040,21 @@ async function loadOrders() {
             }) : '-';
             
             const orderId = order.order_id || order.id;
+            // 轉義訂單 ID，避免特殊字符導致問題
+            const escapedOrderId = escapeHtml(orderId);
             
             tableHTML += `
                 <tr>
-                    <td>${orderId}</td>
+                    <td>${escapedOrderId}</td>
                     <td>
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <span>${order.user_name || '未知用戶'}</span>
-                            <span style="font-size: 0.85rem; color: #64748b;">${order.user_email || ''}</span>
+                            <span>${escapeHtml(order.user_name || '未知用戶')}</span>
+                            <span style="font-size: 0.85rem; color: #64748b;">${escapeHtml(order.user_email || '')}</span>
                         </div>
                     </td>
                     <td>${order.plan_type === 'monthly' ? '月費' : '年費'}</td>
                     <td>NT$${order.amount?.toLocaleString() || 0}</td>
-                    <td>${order.payment_method || '-'}</td>
+                    <td>${escapeHtml(order.payment_method || '-')}</td>
                     <td>
                         <span class="badge ${order.payment_status === 'paid' ? 'badge-success' : 'badge-danger'}">
                             ${order.payment_status === 'paid' ? '已付款' : '待付款'}
@@ -3060,9 +3062,9 @@ async function loadOrders() {
                     </td>
                     <td>${paidDate}</td>
                     <td>${expiresDate}</td>
-                    <td>${order.invoice_number || '-'}</td>
+                    <td>${escapeHtml(order.invoice_number || '-')}</td>
                     <td>
-                        <button class="btn-action btn-delete" onclick="adminDeleteOrder('${orderId}')" type="button" title="刪除訂單">
+                        <button class="btn-action btn-delete" onclick="adminDeleteOrder(${JSON.stringify(orderId)})" type="button" title="刪除訂單">
                             🗑️ 刪除
                         </button>
                     </td>
@@ -3213,12 +3215,23 @@ async function viewCleanupLogDetail(logId) {
 
 // 管理員刪除訂單
 async function adminDeleteOrder(orderId) {
-    if (!confirm(`確定要刪除訂單 ${orderId} 嗎？此操作無法復原。\n\n注意：管理員可以刪除任何狀態的訂單（包括已付款的訂單）。`)) {
+    // 確保 orderId 是字符串且已清理
+    if (!orderId || typeof orderId !== 'string') {
+        showToast('訂單 ID 無效', 'error');
+        return;
+    }
+    
+    // 清理訂單 ID（移除可能的額外字符，如 :1）
+    const cleanOrderId = orderId.trim().split(':')[0]; // 移除冒號後的所有內容
+    
+    if (!confirm(`確定要刪除訂單 ${cleanOrderId} 嗎？此操作無法復原。\n\n注意：管理員可以刪除任何狀態的訂單（包括已付款的訂單）。`)) {
         return;
     }
     
     try {
-        const response = await adminFetch(`${API_BASE_URL}/admin/orders/${orderId}`, {
+        // 使用 encodeURIComponent 確保 URL 安全
+        const encodedOrderId = encodeURIComponent(cleanOrderId);
+        const response = await adminFetch(`${API_BASE_URL}/admin/orders/${encodedOrderId}`, {
             method: 'DELETE'
         });
         
@@ -3227,12 +3240,13 @@ async function adminDeleteOrder(orderId) {
             showToast('訂單已刪除', 'success');
             loadOrders(); // 重新載入訂單列表
         } else {
-            const error = await response.json();
-            showToast(error.error || '刪除失敗', 'error');
+            const errorData = await response.json().catch(() => ({ error: '刪除失敗' }));
+            showToast(errorData.error || '刪除失敗', 'error');
+            console.error('刪除訂單失敗:', response.status, errorData);
         }
     } catch (error) {
         console.error('刪除訂單失敗:', error);
-        showToast('刪除訂單失敗', 'error');
+        showToast('刪除訂單失敗: ' + error.message, 'error');
     }
 }
 
