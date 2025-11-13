@@ -579,6 +579,7 @@ function switchSection(section) {
         'scripts': '腳本管理',
         'ip-planning': 'IP人設規劃',
         'orders': '購買記錄',
+        'order-cleanup-logs': '訂單清理日誌',
         // 'generations': '生成記錄', // 已隱藏
         'analytics': '數據分析',
         'admin-settings': '管理員設定'
@@ -620,6 +621,9 @@ function loadSectionData(section) {
             break;
         case 'orders':
             loadOrders();
+            break;
+        case 'order-cleanup-logs':
+            loadOrderCleanupLogs();
             break;
         case 'license-activations':
             loadLicenseActivations();
@@ -3007,6 +3011,7 @@ async function loadOrders() {
                             <th>付款時間</th>
                             <th>到期日期</th>
                             <th>發票號碼</th>
+                            <th>操作</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -3034,9 +3039,11 @@ async function loadOrders() {
                 day: '2-digit'
             }) : '-';
             
+            const orderId = order.order_id || order.id;
+            
             tableHTML += `
                 <tr>
-                    <td>${order.order_id || order.id}</td>
+                    <td>${orderId}</td>
                     <td>
                         <div style="display: flex; align-items: center; gap: 8px;">
                             <span>${order.user_name || '未知用戶'}</span>
@@ -3054,6 +3061,11 @@ async function loadOrders() {
                     <td>${paidDate}</td>
                     <td>${expiresDate}</td>
                     <td>${order.invoice_number || '-'}</td>
+                    <td>
+                        <button class="btn-action btn-delete" onclick="adminDeleteOrder('${orderId}')" type="button" title="刪除訂單">
+                            🗑️ 刪除
+                        </button>
+                    </td>
                 </tr>
             `;
         });
@@ -3073,6 +3085,154 @@ async function loadOrders() {
     } catch (error) {
         console.error('載入訂單失敗:', error);
         showToast('載入訂單失敗', 'error');
+    }
+}
+
+// ===== 訂單清理日誌 =====
+async function loadOrderCleanupLogs() {
+    try {
+        const response = await adminFetch(`${API_BASE_URL}/admin/order-cleanup-logs`);
+        const data = await response.json();
+        const logs = data.logs || [];
+        
+        const tbody = document.getElementById('cleanup-logs-table-body');
+        if (!tbody) {
+            console.error('找不到清理日誌表格 tbody 元素');
+            return;
+        }
+        
+        if (logs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">暫無清理日誌</td></tr>';
+            return;
+        }
+        
+        tbody.innerHTML = logs.map(log => {
+            const cleanupDate = formatDateTime(log.cleanup_date);
+            const deletedCount = log.deleted_count || 0;
+            const totalAmount = log.details?.total_amount || 0;
+            const deletedOrders = log.deleted_orders || '';
+            const orderIds = deletedOrders.split(',').filter(id => id.trim()).slice(0, 5); // 最多顯示5個
+            const moreCount = deletedOrders.split(',').filter(id => id.trim()).length - orderIds.length;
+            
+            return `
+                <tr>
+                    <td>${escapeHtml(cleanupDate)}</td>
+                    <td><span class="badge">${deletedCount} 筆</span></td>
+                    <td>NT$${totalAmount.toLocaleString()}</td>
+                    <td>
+                        <div style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;">
+                            ${orderIds.map(id => `<code style="font-size: 0.75rem; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; margin-right: 4px;">${escapeHtml(id.trim())}</code>`).join('')}
+                            ${moreCount > 0 ? `<span style="color: #64748b; font-size: 0.85rem;">...還有 ${moreCount} 筆</span>` : ''}
+                        </div>
+                    </td>
+                    <td>
+                        <button class="btn-action btn-view" onclick="viewCleanupLogDetail(${log.id})" type="button">查看詳情</button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    } catch (error) {
+        console.error('載入清理日誌失敗:', error);
+        showToast('載入清理日誌失敗', 'error');
+        const tbody = document.getElementById('cleanup-logs-table-body');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem; color: #ef4444;">載入失敗</td></tr>';
+        }
+    }
+}
+
+async function viewCleanupLogDetail(logId) {
+    try {
+        const response = await adminFetch(`${API_BASE_URL}/admin/order-cleanup-logs`);
+        const data = await response.json();
+        const logs = data.logs || [];
+        const log = logs.find(l => l.id === logId);
+        
+        if (!log) {
+            showToast('找不到清理日誌', 'error');
+            return;
+        }
+        
+        const details = log.details || {};
+        const deletedOrders = details.deleted_orders || [];
+        
+        let content = `
+            <div style="padding: 20px;">
+                <h3 style="margin-bottom: 16px;">清理日誌詳情</h3>
+                <div style="padding: 12px; background: #f8fafc; border-radius: 8px; margin-bottom: 16px;">
+                    <p style="margin: 4px 0;"><strong>清理時間：</strong>${escapeHtml(formatDateTime(log.cleanup_date))}</p>
+                    <p style="margin: 4px 0;"><strong>刪除數量：</strong>${log.deleted_count || 0} 筆</p>
+                    <p style="margin: 4px 0;"><strong>總金額：</strong>NT$${(details.total_amount || 0).toLocaleString()}</p>
+                    <p style="margin: 4px 0;"><strong>清理閾值：</strong>${details.hours_threshold || 24} 小時</p>
+                </div>
+        `;
+        
+        if (deletedOrders.length > 0) {
+            content += `
+                <div style="margin-top: 16px;">
+                    <h4 style="margin-bottom: 8px;">已刪除的訂單列表</h4>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background: #f3f4f6;">
+                                <th style="padding: 8px; text-align: left;">訂單編號</th>
+                                <th style="padding: 8px; text-align: left;">用戶ID</th>
+                                <th style="padding: 8px; text-align: left;">方案</th>
+                                <th style="padding: 8px; text-align: right;">金額</th>
+                                <th style="padding: 8px; text-align: left;">創建時間</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            deletedOrders.forEach(order => {
+                content += `
+                    <tr>
+                        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(order.order_id || '-')}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml((order.user_id || '').substring(0, 16))}...</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(order.plan_type === 'monthly' ? '月費' : order.plan_type === 'yearly' ? '年費' : order.plan_type || '-')}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">NT$${(order.amount || 0).toLocaleString()}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(formatDateTime(order.created_at))}</td>
+                    </tr>
+                `;
+            });
+            
+            content += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        
+        content += `</div>`;
+        showUserDetailModal(content);
+    } catch (error) {
+        console.error('載入清理日誌詳情失敗:', error);
+        showToast('載入清理日誌詳情失敗', 'error');
+    }
+}
+
+// 管理員刪除訂單
+async function adminDeleteOrder(orderId) {
+    if (!confirm(`確定要刪除訂單 ${orderId} 嗎？此操作無法復原。\n\n注意：管理員可以刪除任何狀態的訂單（包括已付款的訂單）。`)) {
+        return;
+    }
+    
+    try {
+        const response = await adminFetch(`${API_BASE_URL}/admin/orders/${orderId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showToast('訂單已刪除', 'success');
+            loadOrders(); // 重新載入訂單列表
+        } else {
+            const error = await response.json();
+            showToast(error.error || '刪除失敗', 'error');
+        }
+    } catch (error) {
+        console.error('刪除訂單失敗:', error);
+        showToast('刪除訂單失敗', 'error');
     }
 }
 

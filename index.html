@@ -71,6 +71,10 @@
                     <span class="icon">💳</span>
                     <span>購買記錄</span>
                 </a>
+                <a href="#" class="nav-item" data-section="order-cleanup-logs">
+                    <span class="icon">🧹</span>
+                    <span>訂單清理日誌</span>
+                </a>
                 <a href="#" class="nav-item" data-section="license-activations">
                     <span class="icon">🔗</span>
                     <span>授權記錄</span>
@@ -392,6 +396,28 @@
                 </div>
                 <div class="stats-grid" style="margin-bottom: 20px;"></div>
                 <div class="table-container"></div>
+            </div>
+
+            <!-- 訂單清理日誌頁面 -->
+            <div class="section" id="order-cleanup-logs">
+                <div class="section-header">
+                    <h2>訂單清理日誌</h2>
+                    <button class="btn-refresh" onclick="loadOrderCleanupLogs()">🔄 重新整理</button>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="cleanup-logs-table">
+                        <thead>
+                            <tr>
+                                <th>清理時間</th>
+                                <th>刪除數量</th>
+                                <th>總金額</th>
+                                <th>刪除的訂單ID</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cleanup-logs-table-body"></tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- 授權記錄頁面 -->
