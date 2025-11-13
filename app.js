@@ -1183,17 +1183,36 @@ async function loadModes() {
         const response = await adminFetch(`${API_BASE_URL}/admin/mode-statistics`);
         const data = await response.json();
         
-        // 更新模式統計數據
-        const mode1 = data.mode_stats.mode1_quick_generate;
-        const mode2 = data.mode_stats.mode2_ai_consultant;
-        const mode3 = data.mode_stats.mode3_ip_planning;
+        // 檢查數據結構是否存在
+        if (!data || !data.mode_stats) {
+            console.error('模式統計數據格式錯誤:', data);
+            showToast('載入模式分析失敗：數據格式錯誤', 'error');
+            return;
+        }
         
-        document.getElementById('mode1-count').textContent = mode1.count || 0;
-        document.getElementById('mode1-completion').textContent = mode1.completion_rate ? `${mode1.completion_rate}%` : '0%';
-        document.getElementById('mode2-count').textContent = mode2.count || 0;
-        document.getElementById('mode2-avg').textContent = mode2.avg_turns ? `${mode2.avg_turns}` : '0';
-        document.getElementById('mode3-count').textContent = mode3.count || 0;
-        document.getElementById('mode3-profile').textContent = mode3.profiles_generated || 0;
+        // 更新模式統計數據（根據後端實際返回的鍵名）
+        // 後端返回：mode1_ip_planning, mode2_ai_consultant, mode3_quick_generate
+        const mode1 = data.mode_stats.mode1_ip_planning || { count: 0, profiles_generated: 0 };
+        const mode2 = data.mode_stats.mode2_ai_consultant || { count: 0, avg_turns: 0 };
+        const mode3 = data.mode_stats.mode3_quick_generate || { count: 0, completion_rate: 0 };
+        
+        // Mode1: IP人設規劃（顯示使用次數和生成的Profile數）
+        const mode1CountEl = document.getElementById('mode1-count');
+        const mode1CompletionEl = document.getElementById('mode1-completion');
+        if (mode1CountEl) mode1CountEl.textContent = mode1.count || 0;
+        if (mode1CompletionEl) mode1CompletionEl.textContent = mode1.profiles_generated || 0;
+        
+        // Mode2: AI顧問（顯示使用次數和平均對話輪數）
+        const mode2CountEl = document.getElementById('mode2-count');
+        const mode2AvgEl = document.getElementById('mode2-avg');
+        if (mode2CountEl) mode2CountEl.textContent = mode2.count || 0;
+        if (mode2AvgEl) mode2AvgEl.textContent = mode2.avg_turns ? `${mode2.avg_turns}` : '0';
+        
+        // Mode3: 一鍵生成（顯示使用次數和完成率）
+        const mode3CountEl = document.getElementById('mode3-count');
+        const mode3ProfileEl = document.getElementById('mode3-profile');
+        if (mode3CountEl) mode3CountEl.textContent = mode3.count || 0;
+        if (mode3ProfileEl) mode3ProfileEl.textContent = mode3.completion_rate ? `${mode3.completion_rate}%` : '0%';
         
         // 使用真實時間分布數據（分別顯示三個模式）
         const timeDist = data.time_distribution || {};
@@ -3040,8 +3059,16 @@ async function loadOrders() {
             }) : '-';
             
             const orderId = order.order_id || order.id;
+            // 確保 orderId 是有效的字符串
+            if (!orderId) {
+                console.warn('訂單缺少 ID:', order);
+                return; // 跳過無效訂單
+            }
+            
             // 轉義訂單 ID，避免特殊字符導致問題
-            const escapedOrderId = escapeHtml(orderId);
+            const escapedOrderId = escapeHtml(String(orderId));
+            // 使用 data 屬性安全地傳遞 orderId，避免 JSON.stringify 導致的語法錯誤
+            const safeOrderId = String(orderId).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
             
             tableHTML += `
                 <tr>
@@ -3064,7 +3091,7 @@ async function loadOrders() {
                     <td>${expiresDate}</td>
                     <td>${escapeHtml(order.invoice_number || '-')}</td>
                     <td>
-                        <button class="btn-action btn-delete" onclick="adminDeleteOrder(${JSON.stringify(orderId)})" type="button" title="刪除訂單">
+                        <button class="btn-action btn-delete" data-order-id="${safeOrderId}" onclick="adminDeleteOrder(this.dataset.orderId)" type="button" title="刪除訂單">
                             🗑️ 刪除
                         </button>
                     </td>
@@ -3215,11 +3242,15 @@ async function viewCleanupLogDetail(logId) {
 
 // 管理員刪除訂單
 async function adminDeleteOrder(orderId) {
-    // 確保 orderId 是字符串且已清理
-    if (!orderId || typeof orderId !== 'string') {
+    // 確保 orderId 是有效的字符串
+    if (!orderId) {
         showToast('訂單 ID 無效', 'error');
+        console.error('adminDeleteOrder: orderId 為空或無效', orderId);
         return;
     }
+    
+    // 轉換為字符串（處理可能的數字或其他類型）
+    orderId = String(orderId);
     
     // 清理訂單 ID（移除可能的額外字符，如 :1）
     const cleanOrderId = orderId.trim().split(':')[0]; // 移除冒號後的所有內容
