@@ -1948,6 +1948,7 @@ async function loadLongTermMemory() {
             </tr>
         `;
         }).join(''));
+        }
         
     } catch (error) {
         console.error('載入長期記憶失敗:', error);
