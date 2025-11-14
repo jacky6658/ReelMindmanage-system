@@ -934,10 +934,6 @@ async function loadUsers() {
                         <span class="mobile-card-value" id="mobile-subscribe-status-${user.user_id}">${subscribeStatus}</span>
                     </div>
                     <div class="mobile-card-row">
-                        <span class="mobile-card-label">金鑰綁定</span>
-                        <span class="mobile-card-value">${user.has_llm_key ? '<span style="color: #10b981; font-weight: 600;">已綁定</span>' : '<span style="color: #64748b;">未綁定</span>'}</span>
-                    </div>
-                    <div class="mobile-card-row">
                         <span class="mobile-card-label">註冊時間</span>
                         <span class="mobile-card-value">${formatDate(user.created_at)}</span>
                     </div>
@@ -968,19 +964,12 @@ async function loadUsers() {
                     '<span class="badge badge-success">已訂閱</span>' : 
                     '<span class="badge badge-danger">未訂閱</span>';
                 
-                // LLM Key 綁定狀態
-                const hasLlmKey = user.has_llm_key || false;
-                const llmKeyStatus = hasLlmKey ? 
-                    '<span class="badge badge-success">已綁定</span>' : 
-                    '<span class="badge badge-secondary">未綁定</span>';
-                
                 return `
                 <tr>
                     <td>${user.user_id.substring(0, 12)}...</td>
                     <td>${user.email}</td>
                     <td>${user.name || '-'}</td>
                     <td id="subscribe-status-${user.user_id}">${subscribeStatus}</td>
-                    <td>${llmKeyStatus}</td>
                     <td>${formatDate(user.created_at)}</td>
                     <td>${user.conversation_count || 0}</td>
                     <td>${user.script_count || 0}</td>

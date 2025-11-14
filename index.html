@@ -404,6 +404,11 @@
                     <h2>訂單清理日誌</h2>
                     <button class="btn-refresh" onclick="loadOrderCleanupLogs()">🔄 重新整理</button>
                 </div>
+                <div style="padding: 12px 16px; background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 4px; margin-bottom: 16px;">
+                    <p style="margin: 0; color: #1e40af; font-size: 0.9rem;">
+                        <strong>清理規則：</strong>系統會自動清理超過 <strong>24 小時</strong>的待付款訂單（payment_status = 'pending'）。清理任務通過定時任務觸發，通常每天執行一次。
+                    </p>
+                </div>
                 <div class="table-container">
                     <table class="data-table" id="cleanup-logs-table">
                         <thead>
@@ -559,6 +564,15 @@
 
             <!-- 數據分析頁面 -->
             <div class="section" id="analytics">
+                <div class="stats-grid" style="margin-bottom: 24px;">
+                    <div class="stat-card">
+                        <div class="stat-icon">🔑</div>
+                        <div class="stat-info">
+                            <h3 id="llm-key-users-count">-</h3>
+                            <p>已綁定 LLM Key 用戶數</p>
+                        </div>
+                    </div>
+                </div>
                 <div class="analytics-grid">
                     <div class="analytics-card">
                         <h3>平台使用分布</h3>
