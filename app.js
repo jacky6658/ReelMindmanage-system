@@ -1911,43 +1911,43 @@ async function loadLongTermMemory() {
             }
             
             setHTML(tbody, users.map(user => {
-            // 安全處理 types_list（可能為空或 null）
-            const typesList = user.types_list || '';
-            const types = typesList ? typesList.split(',').map(type => type.trim()).filter(type => type) : [];
-            
-            return `
-            <tr>
-                <td>
-                    <div class="user-info">
-                        <span class="user-name">${escapeHtml(user.user_name || '未知')}</span>
-                        <span class="user-email">${escapeHtml(user.user_email || '')}</span>
-                    </div>
-                </td>
-                <td>
-                    <span class="user-id">${escapeHtml(user.user_id ? (user.user_id.substring(0, 20) + (user.user_id.length > 20 ? '...' : '')) : '未知')}</span>
-                </td>
-                <td>
-                    <span class="badge">${user.total_memories || 0}</span>
-                </td>
-                <td>
-                    <span class="badge">${user.session_count || 0}</span>
-                </td>
-                <td>
-                    <span class="conversation-types">
-                        ${types.length > 0 ? types.map(type => `<span class="conversation-type ${type}">${getConversationTypeLabel(type)}</span>`).join(' ') : '<span class="conversation-type">未知</span>'}
-                    </span>
-                </td>
-                <td>
-                    <span class="timestamp">${formatDateTime(user.first_memory || '')}</span>
-                    <br>
-                    <span class="timestamp" style="color: #64748b; font-size: 0.85em;">最後: ${formatDateTime(user.last_memory || '')}</span>
-                </td>
-                <td>
-                    <button class="btn btn-sm btn-primary" onclick="viewUserMemoryDetail('${escapeHtml(user.user_id || '')}')">查看詳情</button>
-                </td>
-            </tr>
-        `;
-        }).join(''));
+                // 安全處理 types_list（可能為空或 null）
+                const typesList = user.types_list || '';
+                const types = typesList ? typesList.split(',').map(type => type.trim()).filter(type => type) : [];
+                
+                return `
+                <tr>
+                    <td>
+                        <div class="user-info">
+                            <span class="user-name">${escapeHtml(user.user_name || '未知')}</span>
+                            <span class="user-email">${escapeHtml(user.user_email || '')}</span>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="user-id">${escapeHtml(user.user_id ? (user.user_id.substring(0, 20) + (user.user_id.length > 20 ? '...' : '')) : '未知')}</span>
+                    </td>
+                    <td>
+                        <span class="badge">${user.total_memories || 0}</span>
+                    </td>
+                    <td>
+                        <span class="badge">${user.session_count || 0}</span>
+                    </td>
+                    <td>
+                        <span class="conversation-types">
+                            ${types.length > 0 ? types.map(type => `<span class="conversation-type ${type}">${getConversationTypeLabel(type)}</span>`).join(' ') : '<span class="conversation-type">未知</span>'}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="timestamp">${formatDateTime(user.first_memory || '')}</span>
+                        <br>
+                        <span class="timestamp" style="color: #64748b; font-size: 0.85em;">最後: ${formatDateTime(user.last_memory || '')}</span>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="viewUserMemoryDetail('${escapeHtml(user.user_id || '')}')">查看詳情</button>
+                    </td>
+                </tr>
+            `;
+            }).join(''));
         }
         
     } catch (error) {
@@ -3367,31 +3367,32 @@ async function loadOrderCleanupLogs() {
                 return;
             }
             
-            tbody.innerHTML = logs.map(log => {
-            const cleanupDate = formatDateTime(log.cleanup_date);
-            const deletedCount = log.deleted_count || 0;
-            const totalAmount = log.details?.total_amount || 0;
-            const deletedOrders = log.deleted_orders || '';
-            const orderIds = deletedOrders.split(',').filter(id => id.trim()).slice(0, 5); // 最多顯示5個
-            const moreCount = deletedOrders.split(',').filter(id => id.trim()).length - orderIds.length;
-            
-            return `
-                <tr>
-                    <td>${escapeHtml(cleanupDate)}</td>
-                    <td><span class="badge">${deletedCount} 筆</span></td>
-                    <td>NT$${totalAmount.toLocaleString()}</td>
-                    <td>
-                        <div style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;">
-                            ${orderIds.map(id => `<code style="font-size: 0.75rem; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; margin-right: 4px;">${escapeHtml(id.trim())}</code>`).join('')}
-                            ${moreCount > 0 ? `<span style="color: #64748b; font-size: 0.85rem;">...還有 ${moreCount} 筆</span>` : ''}
-                        </div>
-                    </td>
-                    <td>
-                        <button class="btn-action btn-view" onclick="viewCleanupLogDetail(${log.id})" type="button">查看詳情</button>
-                    </td>
-                </tr>
-            `;
-        }).join('');
+            setHTML(tbody, logs.map(log => {
+                const cleanupDate = formatDateTime(log.cleanup_date);
+                const deletedCount = log.deleted_count || 0;
+                const totalAmount = log.details?.total_amount || 0;
+                const deletedOrders = log.deleted_orders || '';
+                const orderIds = deletedOrders.split(',').filter(id => id.trim()).slice(0, 5); // 最多顯示5個
+                const moreCount = deletedOrders.split(',').filter(id => id.trim()).length - orderIds.length;
+                
+                return `
+                    <tr>
+                        <td>${escapeHtml(cleanupDate)}</td>
+                        <td><span class="badge">${deletedCount} 筆</span></td>
+                        <td>NT$${totalAmount.toLocaleString()}</td>
+                        <td>
+                            <div style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;">
+                                ${orderIds.map(id => `<code style="font-size: 0.75rem; background: #f3f4f6; padding: 2px 6px; border-radius: 4px; margin-right: 4px;">${escapeHtml(id.trim())}</code>`).join('')}
+                                ${moreCount > 0 ? `<span style="color: #64748b; font-size: 0.85rem;">...還有 ${moreCount} 筆</span>` : ''}
+                            </div>
+                        </td>
+                        <td>
+                            <button class="btn-action btn-view" onclick="viewCleanupLogDetail(${log.id})" type="button">查看詳情</button>
+                        </td>
+                    </tr>
+                `;
+            }).join(''));
+        }
     } catch (error) {
         console.error('載入清理日誌失敗:', error);
         showToast('載入清理日誌失敗', 'error');
