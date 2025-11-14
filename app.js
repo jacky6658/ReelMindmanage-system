@@ -943,12 +943,23 @@ async function loadUsers() {
                     '<span class="badge badge-success">已訂閱</span>' : 
                     '<span class="badge badge-danger">未訂閱</span>';
                 
+                // LLM Key 綁定狀態
+                const hasLlmKey = user.has_llm_key || false;
+                const llmKeyStatus = hasLlmKey ? 
+                    '<span class="badge badge-success">已綁定</span>' : 
+                    '<span class="badge badge-warning">未綁定</span>';
+                const llmKeyInfo = user.llm_keys && user.llm_keys.length > 0 ? 
+                    user.llm_keys.map(k => `${k.provider} (${k.model_name})`).join(', ') : 
+                    '-';
+                
                 return `
                 <tr>
                     <td>${user.user_id.substring(0, 12)}...</td>
                     <td>${user.email}</td>
                     <td>${user.name || '-'}</td>
                     <td id="subscribe-status-${user.user_id}">${subscribeStatus}</td>
+                    <td>${llmKeyStatus}</td>
+                    <td title="${llmKeyInfo}">${llmKeyInfo.length > 30 ? llmKeyInfo.substring(0, 30) + '...' : llmKeyInfo}</td>
                     <td>${formatDate(user.created_at)}</td>
                     <td>${user.conversation_count || 0}</td>
                     <td>${user.script_count || 0}</td>
