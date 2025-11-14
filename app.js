@@ -516,9 +516,9 @@ async function waitFor(selector, timeout = 5000, interval = 50) {
 }
 
 // 初始化
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // 檢查管理員認證
-    checkAdminAuth();
+    await checkAdminAuth();
     
     // 啟動 token 監控（每 30 秒檢查一次，更快檢測過期）
     startTokenMonitor();
@@ -526,6 +526,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // 啟動活動監控（每30秒更新一次）
     startActivityMonitor();
     
+    // 檢查 token 狀態，如果未登入則不執行後續操作
+    if (!checkTokenStatus()) {
+        // 未登入，登入視窗已顯示，不執行數據載入
+        console.log('⚠️ 未登入，等待用戶登入...');
+        // 只初始化基本 UI 功能（時間顯示、導航等），不載入數據
+        initializeNavigation();
+        updateTime();
+        setInterval(updateTime, 1000);
+        return;
+    }
+    
+    // 已登入，正常初始化
     initializeNavigation();
     updateTime();
     setInterval(updateTime, 1000);
@@ -536,6 +548,10 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('resize', function() {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(function() {
+            // 檢查 token 狀態，避免未登入時載入數據
+            if (!checkTokenStatus()) {
+                return;
+            }
             const activeSection = document.querySelector('.section.active');
             if (activeSection) {
                 loadSectionData(activeSection.id);
@@ -741,7 +757,7 @@ async function loadCharts(stats) {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                aspectRatio: 2,
+                aspectRatio: window.innerWidth <= 768 ? 1.5 : 2,
                 plugins: {
                     legend: {
                         display: false
@@ -774,7 +790,7 @@ async function loadCharts(stats) {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                aspectRatio: 2
+                aspectRatio: window.innerWidth <= 768 ? 1.5 : 2
             }
         });
     } catch (error) {
@@ -937,20 +953,19 @@ async function loadUsers() {
         } else {
             // 桌面版：表格佈局
             const tbody = document.getElementById('users-table-body');
+            if (!tbody) {
+                console.error('找不到 users-table-body 元素');
+                showToast('找不到表格元素', 'error');
+                return;
+            }
             tbody.innerHTML = data.users.map(user => {
                 const isSubscribed = user.is_subscribed !== false; // 預設為已訂閱
                 const subscribeStatus = isSubscribed ? 
                     '<span class="badge badge-success">已訂閱</span>' : 
                     '<span class="badge badge-danger">未訂閱</span>';
                 
-                // LLM Key 綁定狀態
-                const hasLlmKey = user.has_llm_key || false;
-                const llmKeyStatus = hasLlmKey ? 
-                    '<span class="badge badge-success">已綁定</span>' : 
-                    '<span class="badge badge-warning">未綁定</span>';
-                const llmKeyInfo = user.llm_keys && user.llm_keys.length > 0 ? 
-                    user.llm_keys.map(k => `${k.provider} (${k.model_name})`).join(', ') : 
-                    '-';
+                // LLM Key 綁定狀態（後端監控但不顯示給管理者）
+                // 注意：has_llm_key 和 llm_keys 數據仍會從後端獲取用於監控，但不顯示在界面上
                 
                 return `
                 <tr>
@@ -958,8 +973,6 @@ async function loadUsers() {
                     <td>${user.email}</td>
                     <td>${user.name || '-'}</td>
                     <td id="subscribe-status-${user.user_id}">${subscribeStatus}</td>
-                    <td>${llmKeyStatus}</td>
-                    <td title="${llmKeyInfo}">${llmKeyInfo.length > 30 ? llmKeyInfo.substring(0, 30) + '...' : llmKeyInfo}</td>
                     <td>${formatDate(user.created_at)}</td>
                     <td>${user.conversation_count || 0}</td>
                     <td>${user.script_count || 0}</td>
@@ -1274,7 +1287,7 @@ async function loadModes() {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                aspectRatio: 2,
+                aspectRatio: window.innerWidth <= 768 ? 1.5 : 2,
                 scales: {
                     x: {
                         stacked: false
@@ -1821,19 +1834,83 @@ async function loadLongTermMemory() {
         const users = data.users || [];
         console.log('用戶列表:', users); // 調試用
         
-        // 顯示用戶列表
-        const tbody = await waitFor('#memory-table-body', 8000).catch(() => null);
-        if (!tbody) {
-            console.error('找不到表格 tbody 元素');
-            return;
-        }
+        // 檢測是否為手機版
+        const isMobile = window.innerWidth <= 768;
+        const tableContainer = document.querySelector('#long-term-memory .table-container');
         
         if (users.length === 0) {
-            setHTML(tbody, '<tr><td colspan="7" style="text-align: center; padding: 2rem;">暫無長期記憶記錄</td></tr>');
+            if (isMobile && tableContainer) {
+                tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">暫無長期記憶記錄</div>';
+            } else {
+                const tbody = await waitFor('#memory-table-body', 8000).catch(() => null);
+                if (tbody) {
+                    setHTML(tbody, '<tr><td colspan="7" style="text-align: center; padding: 2rem;">暫無長期記憶記錄</td></tr>');
+                }
+            }
             return;
         }
         
-        setHTML(tbody, users.map(user => {
+        if (isMobile && tableContainer) {
+            // 手機版：卡片式佈局
+            setHTML(tableContainer, '');
+            const cardsContainer = document.createElement('div');
+            cardsContainer.className = 'mobile-cards-container';
+            
+            cardsContainer.innerHTML = users.map(user => {
+                const typesList = user.types_list || '';
+                const types = typesList ? typesList.split(',').map(type => type.trim()).filter(type => type) : [];
+                
+                return `
+                <div class="mobile-card">
+                    <div class="mobile-card-header">
+                        <span class="mobile-card-title">${escapeHtml(user.user_name || '未知')}</span>
+                        <span class="mobile-card-badge">${user.total_memories || 0} 筆</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">Email</span>
+                        <span class="mobile-card-value">${escapeHtml(user.user_email || '-')}</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">用戶ID</span>
+                        <span class="mobile-card-value">${escapeHtml(user.user_id ? (user.user_id.substring(0, 16) + '...') : '未知')}</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">記憶數</span>
+                        <span class="mobile-card-value">${user.total_memories || 0}</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">會話數</span>
+                        <span class="mobile-card-value">${user.session_count || 0}</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">對話類型</span>
+                        <span class="mobile-card-value">${types.length > 0 ? types.map(type => getConversationTypeLabel(type)).join(', ') : '未知'}</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">首次記錄</span>
+                        <span class="mobile-card-value">${formatDateTime(user.first_memory || '')}</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">最後記錄</span>
+                        <span class="mobile-card-value">${formatDateTime(user.last_memory || '')}</span>
+                    </div>
+                    <div class="mobile-card-actions">
+                        <button class="btn-action btn-view" onclick="viewUserMemoryDetail('${escapeHtml(user.user_id || '')}')" type="button">查看詳情</button>
+                    </div>
+                </div>
+            `;
+            }).join('');
+            
+            tableContainer.appendChild(cardsContainer);
+        } else {
+            // 桌面版：表格佈局
+            const tbody = await waitFor('#memory-table-body', 8000).catch(() => null);
+            if (!tbody) {
+                console.error('找不到表格 tbody 元素');
+                return;
+            }
+            
+            setHTML(tbody, users.map(user => {
             // 安全處理 types_list（可能為空或 null）
             const typesList = user.types_list || '';
             const types = typesList ? typesList.split(',').map(type => type.trim()).filter(type => type) : [];
@@ -2488,7 +2565,7 @@ async function loadAnalytics() {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                aspectRatio: 2
+                aspectRatio: window.innerWidth <= 768 ? 1.5 : 2
             }
         });
         
@@ -2508,7 +2585,7 @@ async function loadAnalytics() {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                aspectRatio: 2
+                aspectRatio: window.innerWidth <= 768 ? 1.5 : 2
             }
         });
         
@@ -2530,7 +2607,7 @@ async function loadAnalytics() {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                aspectRatio: 2
+                aspectRatio: window.innerWidth <= 768 ? 1.5 : 2
             }
         });
         
@@ -2555,7 +2632,7 @@ async function loadAnalytics() {
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                aspectRatio: 2
+                aspectRatio: window.innerWidth <= 768 ? 1.5 : 2
             }
         });
     } catch (error) {
@@ -3020,14 +3097,96 @@ async function loadOrders() {
         
         console.log('訂單數據:', allOrders);
         
+        // 檢測是否為手機版
+        const isMobile = window.innerWidth <= 768;
         const tableContainer = await waitFor('#orders .table-container', 8000).catch(() => null);
         if (!tableContainer) {
             console.error('找不到訂單表格容器');
             return;
         }
         
-        // 生成表格HTML
-        let tableHTML = `
+        if (isMobile) {
+            // 手機版：卡片式佈局
+            setHTML(tableContainer, '');
+            const cardsContainer = document.createElement('div');
+            cardsContainer.className = 'mobile-cards-container';
+            
+            if (allOrders.length === 0) {
+                cardsContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">暫無訂單記錄</div>';
+            } else {
+                cardsContainer.innerHTML = allOrders.map(order => {
+                    const orderId = order.order_id || order.id;
+                    const safeOrderId = String(orderId || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                    const paidDate = order.paid_at ? new Date(order.paid_at).toLocaleString('zh-TW', {
+                        timeZone: 'Asia/Taipei',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }) : '-';
+                    const expiresDate = order.expires_at ? new Date(order.expires_at).toLocaleString('zh-TW', {
+                        timeZone: 'Asia/Taipei',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    }) : '-';
+                    const paymentMethodDisplay = order.payment_method || '-';
+                    
+                    return `
+                    <div class="mobile-card">
+                        <div class="mobile-card-header">
+                            <span class="mobile-card-title">${escapeHtml(orderId || '未知訂單')}</span>
+                            <span class="mobile-card-badge ${order.payment_status === 'paid' ? 'badge-success' : 'badge-danger'}">
+                                ${order.payment_status === 'paid' ? '已付款' : '待付款'}
+                            </span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">用戶</span>
+                            <span class="mobile-card-value">${escapeHtml(order.user_name || '未知用戶')}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">Email</span>
+                            <span class="mobile-card-value">${escapeHtml(order.user_email || '-')}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">方案</span>
+                            <span class="mobile-card-value">${order.plan_type === 'monthly' ? '月費' : '年費'}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">金額</span>
+                            <span class="mobile-card-value">NT$${order.amount?.toLocaleString() || 0}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">付款方式</span>
+                            <span class="mobile-card-value">${escapeHtml(paymentMethodDisplay)}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">付款時間</span>
+                            <span class="mobile-card-value">${paidDate}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">到期日期</span>
+                            <span class="mobile-card-value">${expiresDate}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">發票號碼</span>
+                            <span class="mobile-card-value">${escapeHtml(order.invoice_number || '-')}</span>
+                        </div>
+                        <div class="mobile-card-actions">
+                            <button class="btn-action btn-delete" data-order-id="${safeOrderId}" onclick="adminDeleteOrder(this.dataset.orderId)" type="button">刪除</button>
+                        </div>
+                    </div>
+                `;
+                }).join('');
+            }
+            
+            tableContainer.appendChild(cardsContainer);
+        } else {
+            // 桌面版：表格佈局
+            setHTML(tableContainer, '');
+            // 生成表格HTML
+            let tableHTML = `
             <div class="table-wrapper">
                 <table class="data-table">
                     <thead>
@@ -3045,9 +3204,9 @@ async function loadOrders() {
                         </tr>
                     </thead>
                     <tbody>
-        `;
-        
-        allOrders.forEach(order => {
+            `;
+            
+            allOrders.forEach(order => {
             const orderDate = order.created_at ? new Date(order.created_at).toLocaleString('zh-TW', {
                 timeZone: 'Asia/Taipei',
                 year: 'numeric',
@@ -3110,13 +3269,14 @@ async function loadOrders() {
             `;
         });
         
-        tableHTML += `
+            tableHTML += `
                     </tbody>
                 </table>
             </div>
-        `;
-        
-        setHTML(tableContainer, tableHTML);
+            `;
+            
+            setHTML(tableContainer, tableHTML);
+        }
         
         // 更新統計
         const totalRevenue = allOrders.filter(o => o.payment_status === 'paid').reduce((sum, o) => sum + (o.amount || 0), 0);
@@ -3135,18 +3295,78 @@ async function loadOrderCleanupLogs() {
         const data = await response.json();
         const logs = data.logs || [];
         
-        const tbody = document.getElementById('cleanup-logs-table-body');
-        if (!tbody) {
-            console.error('找不到清理日誌表格 tbody 元素');
-            return;
-        }
+        // 檢測是否為手機版
+        const isMobile = window.innerWidth <= 768;
+        const tableContainer = document.querySelector('#order-cleanup-logs .table-container');
         
         if (logs.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">暫無清理日誌</td></tr>';
+            if (isMobile && tableContainer) {
+                tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">暫無清理日誌</div>';
+            } else {
+                const tbody = document.getElementById('cleanup-logs-table-body');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 2rem;">暫無清理日誌</td></tr>';
+                }
+            }
             return;
         }
         
-        tbody.innerHTML = logs.map(log => {
+        if (isMobile && tableContainer) {
+            // 手機版：卡片式佈局
+            setHTML(tableContainer, '');
+            const cardsContainer = document.createElement('div');
+            cardsContainer.className = 'mobile-cards-container';
+            
+            cardsContainer.innerHTML = logs.map(log => {
+                const cleanupDate = formatDateTime(log.cleanup_date);
+                const deletedCount = log.deleted_count || 0;
+                const totalAmount = log.details?.total_amount || 0;
+                const deletedOrders = log.deleted_orders || '';
+                const orderIds = deletedOrders.split(',').filter(id => id.trim()).slice(0, 3);
+                const moreCount = deletedOrders.split(',').filter(id => id.trim()).length - orderIds.length;
+                
+                return `
+                <div class="mobile-card">
+                    <div class="mobile-card-header">
+                        <span class="mobile-card-title">清理記錄</span>
+                        <span class="mobile-card-badge">${deletedCount} 筆</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">清理時間</span>
+                        <span class="mobile-card-value">${escapeHtml(cleanupDate)}</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">刪除數量</span>
+                        <span class="mobile-card-value">${deletedCount} 筆</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">總金額</span>
+                        <span class="mobile-card-value">NT$${totalAmount.toLocaleString()}</span>
+                    </div>
+                    <div class="mobile-card-row">
+                        <span class="mobile-card-label">訂單ID</span>
+                        <span class="mobile-card-value" style="font-size: 0.85rem;">
+                            ${orderIds.map(id => `<code style="background: #f3f4f6; padding: 2px 4px; border-radius: 3px; margin-right: 4px;">${escapeHtml(id.trim())}</code>`).join('')}
+                            ${moreCount > 0 ? `<span style="color: #64748b;">...還有 ${moreCount} 筆</span>` : ''}
+                        </span>
+                    </div>
+                    <div class="mobile-card-actions">
+                        <button class="btn-action btn-view" onclick="viewCleanupLogDetail(${log.id})" type="button">查看詳情</button>
+                    </div>
+                </div>
+            `;
+            }).join('');
+            
+            tableContainer.appendChild(cardsContainer);
+        } else {
+            // 桌面版：表格佈局
+            const tbody = document.getElementById('cleanup-logs-table-body');
+            if (!tbody) {
+                console.error('找不到清理日誌表格 tbody 元素');
+                return;
+            }
+            
+            tbody.innerHTML = logs.map(log => {
             const cleanupDate = formatDateTime(log.cleanup_date);
             const deletedCount = log.deleted_count || 0;
             const totalAmount = log.details?.total_amount || 0;
@@ -3308,14 +3528,106 @@ async function loadLicenseActivations() {
         
         console.log('授權記錄數據:', activations);
         
+        // 檢測是否為手機版
+        const isMobile = window.innerWidth <= 768;
         const tableContainer = await waitFor('#license-activations .table-container', 8000).catch(() => null);
         if (!tableContainer) {
             console.error('找不到授權記錄表格容器');
             return;
         }
         
-        // 生成表格HTML
-        let tableHTML = `
+        if (isMobile) {
+            // 手機版：卡片式佈局
+            setHTML(tableContainer, '');
+            const cardsContainer = document.createElement('div');
+            cardsContainer.className = 'mobile-cards-container';
+            
+            if (activations.length === 0) {
+                cardsContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">暫無授權記錄</div>';
+            } else {
+                const formatDate = (dateStr) => {
+                    if (!dateStr) return '-';
+                    try {
+                        return new Date(dateStr).toLocaleString('zh-TW', {
+                            timeZone: 'Asia/Taipei',
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                    } catch (e) {
+                        return dateStr;
+                    }
+                };
+                
+                cardsContainer.innerHTML = activations.map(activation => {
+                    const statusBadge = {
+                        'pending': '<span class="badge badge-warning">待啟用</span>',
+                        'activated': '<span class="badge badge-success">已啟用</span>',
+                        'expired': '<span class="badge badge-danger">已過期</span>'
+                    }[activation.status] || '<span class="badge">未知</span>';
+                    
+                    return `
+                    <div class="mobile-card">
+                        <div class="mobile-card-header">
+                            <span class="mobile-card-title">授權 #${activation.id}</span>
+                            ${statusBadge}
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">Token</span>
+                            <span class="mobile-card-value" style="font-size: 0.75rem; word-break: break-all;">${escapeHtml((activation.activation_token || '-').substring(0, 20) + '...')}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">通路</span>
+                            <span class="mobile-card-value">${escapeHtml(activation.channel || '-')}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">訂單編號</span>
+                            <span class="mobile-card-value">${escapeHtml(activation.order_id || '-')}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">Email</span>
+                            <span class="mobile-card-value">${escapeHtml(activation.email || '-')}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">方案</span>
+                            <span class="mobile-card-value">${activation.plan_type === 'monthly' ? '月費' : '年費'}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">金額</span>
+                            <span class="mobile-card-value">NT$${activation.amount?.toLocaleString() || 0}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">連結到期</span>
+                            <span class="mobile-card-value">${formatDate(activation.link_expires_at)}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">授權到期</span>
+                            <span class="mobile-card-value">${formatDate(activation.license_expires_at)}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">啟用時間</span>
+                            <span class="mobile-card-value">${formatDate(activation.activated_at)}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">創建時間</span>
+                            <span class="mobile-card-value">${formatDate(activation.created_at)}</span>
+                        </div>
+                        <div class="mobile-card-actions">
+                            <button class="btn-action btn-danger" onclick="deleteLicenseActivation(${activation.id})" type="button">刪除</button>
+                        </div>
+                    </div>
+                `;
+                }).join('');
+            }
+            
+            tableContainer.appendChild(cardsContainer);
+        } else {
+            // 桌面版：表格佈局
+            setHTML(tableContainer, '');
+            // 生成表格HTML
+            let tableHTML = `
             <div class="table-wrapper">
                 <table class="data-table">
                     <thead>
@@ -3336,9 +3648,9 @@ async function loadLicenseActivations() {
                         </tr>
                     </thead>
                     <tbody>
-        `;
-        
-        activations.forEach(activation => {
+            `;
+            
+            activations.forEach(activation => {
             const statusBadge = {
                 'pending': '<span class="badge badge-warning">待啟用</span>',
                 'activated': '<span class="badge badge-success">已啟用</span>',
@@ -3384,13 +3696,14 @@ async function loadLicenseActivations() {
             `;
         });
         
-        tableHTML += `
+            tableHTML += `
                     </tbody>
                 </table>
             </div>
-        `;
-        
-        setHTML(tableContainer, tableHTML);
+            `;
+            
+            setHTML(tableContainer, tableHTML);
+        }
     } catch (error) {
         console.error('載入授權記錄失敗:', error);
         showToast('載入授權記錄失敗', 'error');

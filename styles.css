@@ -840,6 +840,65 @@ body {
     #page-title {
         font-size: 1.25rem;
     }
+    
+    /* 管理員設定頁面在手機上 */
+    .settings-container {
+        padding: 1rem !important;
+    }
+    
+    .settings-card {
+        padding: 1rem !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    .export-options,
+    .import-options {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+    
+    .export-options button,
+    .import-options button,
+    .import-options select {
+        width: 100%;
+        font-size: 0.875rem;
+        padding: 0.75rem 1rem;
+    }
+    
+    /* 圖表容器在視窗大小改變時重新調整 */
+    .charts-container {
+        flex-direction: column;
+    }
+    
+    .chart-card {
+        margin-bottom: 1rem;
+    }
+    
+    /* 最近活動在手機上 */
+    .recent-activity {
+        padding: 1rem;
+    }
+    
+    .activity-list {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    /* 模式卡片在手機上 */
+    .mode-card {
+        margin-bottom: 1rem;
+    }
+    
+    /* 確保所有按鈕在手機上可點擊 */
+    .btn-action,
+    .btn-view,
+    .btn-delete,
+    .btn-subscribe {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+    }
 }
 
 /* Badge 樣式 */
