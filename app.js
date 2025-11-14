@@ -934,6 +934,10 @@ async function loadUsers() {
                         <span class="mobile-card-value" id="mobile-subscribe-status-${user.user_id}">${subscribeStatus}</span>
                     </div>
                     <div class="mobile-card-row">
+                        <span class="mobile-card-label">金鑰綁定</span>
+                        <span class="mobile-card-value">${user.has_llm_key ? '<span style="color: #10b981; font-weight: 600;">已綁定</span>' : '<span style="color: #64748b;">未綁定</span>'}</span>
+                    </div>
+                    <div class="mobile-card-row">
                         <span class="mobile-card-label">註冊時間</span>
                         <span class="mobile-card-value">${formatDate(user.created_at)}</span>
                     </div>
@@ -964,8 +968,11 @@ async function loadUsers() {
                     '<span class="badge badge-success">已訂閱</span>' : 
                     '<span class="badge badge-danger">未訂閱</span>';
                 
-                // LLM Key 綁定狀態（後端監控但不顯示給管理者）
-                // 注意：has_llm_key 和 llm_keys 數據仍會從後端獲取用於監控，但不顯示在界面上
+                // LLM Key 綁定狀態
+                const hasLlmKey = user.has_llm_key || false;
+                const llmKeyStatus = hasLlmKey ? 
+                    '<span class="badge badge-success">已綁定</span>' : 
+                    '<span class="badge badge-secondary">未綁定</span>';
                 
                 return `
                 <tr>
@@ -973,6 +980,7 @@ async function loadUsers() {
                     <td>${user.email}</td>
                     <td>${user.name || '-'}</td>
                     <td id="subscribe-status-${user.user_id}">${subscribeStatus}</td>
+                    <td>${llmKeyStatus}</td>
                     <td>${formatDate(user.created_at)}</td>
                     <td>${user.conversation_count || 0}</td>
                     <td>${user.script_count || 0}</td>
@@ -1074,6 +1082,34 @@ async function viewUser(userId) {
             content += `<p><strong>訂閱來源：</strong><span style="color: #0f3dde; font-weight: 600;">${sourceDisplay}</span></p>`;
             content += `<p><strong>到期時間：</strong>${expiresAt}</p>`;
             content += `<p><strong>狀態：</strong>${licenseData.status === 'active' ? '✅ 有效' : '❌ 已過期'}</p>`;
+            content += `</div>`;
+        }
+        
+        // LLM Key 綁定資訊
+        const llmKeys = userData.user_info?.llm_keys || [];
+        const hasLlmKey = userData.user_info?.has_llm_key || false;
+        if (hasLlmKey && llmKeys.length > 0) {
+            content += `<div style="margin-top: 16px; padding: 12px; background: #f0fdf4; border-radius: 8px;">`;
+            content += `<h4 style="margin-bottom: 8px;">🔑 LLM Key 綁定資訊</h4>`;
+            llmKeys.forEach(key => {
+                content += `<p style="margin: 4px 0;"><strong>${key.provider || '未知'}</strong> - 模型: ${key.model_name || '系統預設'}</p>`;
+                if (key.created_at) {
+                    const createdAt = new Date(key.created_at).toLocaleString('zh-TW', {
+                        timeZone: 'Asia/Taipei',
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    content += `<p style="margin: 4px 0; font-size: 0.9rem; color: #64748b;">綁定時間: ${createdAt}</p>`;
+                }
+            });
+            content += `</div>`;
+        } else {
+            content += `<div style="margin-top: 16px; padding: 12px; background: #fef2f2; border-radius: 8px;">`;
+            content += `<h4 style="margin-bottom: 8px;">🔑 LLM Key 綁定資訊</h4>`;
+            content += `<p style="color: #64748b;">尚未綁定 LLM Key</p>`;
             content += `</div>`;
         }
         
@@ -1842,7 +1878,7 @@ async function loadLongTermMemory() {
             if (isMobile && tableContainer) {
                 tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">暫無長期記憶記錄</div>';
             } else {
-                const tbody = await waitFor('#memory-table-body', 8000).catch(() => null);
+        const tbody = await waitFor('#memory-table-body', 8000).catch(() => null);
                 if (tbody) {
                     setHTML(tbody, '<tr><td colspan="7" style="text-align: center; padding: 2rem;">暫無長期記憶記錄</td></tr>');
                 }
@@ -1907,47 +1943,47 @@ async function loadLongTermMemory() {
             const tbody = await waitFor('#memory-table-body', 8000).catch(() => null);
             if (!tbody) {
                 console.error('找不到表格 tbody 元素');
-                return;
-            }
+            return;
+        }
+        
+        setHTML(tbody, users.map(user => {
+            // 安全處理 types_list（可能為空或 null）
+            const typesList = user.types_list || '';
+            const types = typesList ? typesList.split(',').map(type => type.trim()).filter(type => type) : [];
             
-            setHTML(tbody, users.map(user => {
-                // 安全處理 types_list（可能為空或 null）
-                const typesList = user.types_list || '';
-                const types = typesList ? typesList.split(',').map(type => type.trim()).filter(type => type) : [];
-                
-                return `
-                <tr>
-                    <td>
-                        <div class="user-info">
-                            <span class="user-name">${escapeHtml(user.user_name || '未知')}</span>
-                            <span class="user-email">${escapeHtml(user.user_email || '')}</span>
-                        </div>
-                    </td>
-                    <td>
-                        <span class="user-id">${escapeHtml(user.user_id ? (user.user_id.substring(0, 20) + (user.user_id.length > 20 ? '...' : '')) : '未知')}</span>
-                    </td>
-                    <td>
-                        <span class="badge">${user.total_memories || 0}</span>
-                    </td>
-                    <td>
-                        <span class="badge">${user.session_count || 0}</span>
-                    </td>
-                    <td>
-                        <span class="conversation-types">
-                            ${types.length > 0 ? types.map(type => `<span class="conversation-type ${type}">${getConversationTypeLabel(type)}</span>`).join(' ') : '<span class="conversation-type">未知</span>'}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="timestamp">${formatDateTime(user.first_memory || '')}</span>
-                        <br>
-                        <span class="timestamp" style="color: #64748b; font-size: 0.85em;">最後: ${formatDateTime(user.last_memory || '')}</span>
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-primary" onclick="viewUserMemoryDetail('${escapeHtml(user.user_id || '')}')">查看詳情</button>
-                    </td>
-                </tr>
-            `;
-            }).join(''));
+            return `
+            <tr>
+                <td>
+                    <div class="user-info">
+                        <span class="user-name">${escapeHtml(user.user_name || '未知')}</span>
+                        <span class="user-email">${escapeHtml(user.user_email || '')}</span>
+                    </div>
+                </td>
+                <td>
+                    <span class="user-id">${escapeHtml(user.user_id ? (user.user_id.substring(0, 20) + (user.user_id.length > 20 ? '...' : '')) : '未知')}</span>
+                </td>
+                <td>
+                    <span class="badge">${user.total_memories || 0}</span>
+                </td>
+                <td>
+                    <span class="badge">${user.session_count || 0}</span>
+                </td>
+                <td>
+                    <span class="conversation-types">
+                        ${types.length > 0 ? types.map(type => `<span class="conversation-type ${type}">${getConversationTypeLabel(type)}</span>`).join(' ') : '<span class="conversation-type">未知</span>'}
+                    </span>
+                </td>
+                <td>
+                    <span class="timestamp">${formatDateTime(user.first_memory || '')}</span>
+                    <br>
+                    <span class="timestamp" style="color: #64748b; font-size: 0.85em;">最後: ${formatDateTime(user.last_memory || '')}</span>
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="viewUserMemoryDetail('${escapeHtml(user.user_id || '')}')">查看詳情</button>
+                </td>
+            </tr>
+        `;
+        }).join(''));
         }
         
     } catch (error) {
@@ -2550,6 +2586,13 @@ async function loadAnalytics() {
         // 調用真實 API
         const response = await adminFetch(`${API_BASE_URL}/admin/analytics-data`);
         const data = await response.json();
+        
+        // 顯示綁定 LLM Key 的用戶數
+        const llmKeyUsersCount = data.llm_key_users_count || 0;
+        const llmKeyUsersCountEl = document.getElementById('llm-key-users-count');
+        if (llmKeyUsersCountEl) {
+            llmKeyUsersCountEl.textContent = llmKeyUsersCount;
+        }
         
         // 平台使用分布
         if (charts.platform) charts.platform.destroy();
@@ -3186,8 +3229,8 @@ async function loadOrders() {
         } else {
             // 桌面版：表格佈局
             setHTML(tableContainer, '');
-            // 生成表格HTML
-            let tableHTML = `
+        // 生成表格HTML
+        let tableHTML = `
             <div class="table-wrapper">
                 <table class="data-table">
                     <thead>
@@ -3205,9 +3248,9 @@ async function loadOrders() {
                         </tr>
                     </thead>
                     <tbody>
-            `;
-            
-            allOrders.forEach(order => {
+        `;
+        
+        allOrders.forEach(order => {
             const orderDate = order.created_at ? new Date(order.created_at).toLocaleString('zh-TW', {
                 timeZone: 'Asia/Taipei',
                 year: 'numeric',
@@ -3270,13 +3313,13 @@ async function loadOrders() {
             `;
         });
         
-            tableHTML += `
+        tableHTML += `
                     </tbody>
                 </table>
             </div>
-            `;
-            
-            setHTML(tableContainer, tableHTML);
+        `;
+        
+        setHTML(tableContainer, tableHTML);
         }
         
         // 更新統計
@@ -3628,8 +3671,8 @@ async function loadLicenseActivations() {
         } else {
             // 桌面版：表格佈局
             setHTML(tableContainer, '');
-            // 生成表格HTML
-            let tableHTML = `
+        // 生成表格HTML
+        let tableHTML = `
             <div class="table-wrapper">
                 <table class="data-table">
                     <thead>
@@ -3650,9 +3693,9 @@ async function loadLicenseActivations() {
                         </tr>
                     </thead>
                     <tbody>
-            `;
-            
-            activations.forEach(activation => {
+        `;
+        
+        activations.forEach(activation => {
             const statusBadge = {
                 'pending': '<span class="badge badge-warning">待啟用</span>',
                 'activated': '<span class="badge badge-success">已啟用</span>',
@@ -3698,13 +3741,13 @@ async function loadLicenseActivations() {
             `;
         });
         
-            tableHTML += `
+        tableHTML += `
                     </tbody>
                 </table>
             </div>
-            `;
-            
-            setHTML(tableContainer, tableHTML);
+        `;
+        
+        setHTML(tableContainer, tableHTML);
         }
     } catch (error) {
         console.error('載入授權記錄失敗:', error);
