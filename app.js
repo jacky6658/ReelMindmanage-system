@@ -1066,7 +1066,7 @@ async function viewUser(userId) {
             
             content += `<div style="margin-top: 16px; padding: 12px; background: #f0f9ff; border-radius: 8px;">`;
             content += `<h4 style="margin-bottom: 8px;">🔑 授權資訊</h4>`;
-            content += `<p><strong>等級：</strong>${licenseData.tier === 'yearly' ? '年費' : licenseData.tier === 'monthly' ? '月費' : licenseData.tier}</p>`;
+            content += `<p><strong>等級：</strong>${licenseData.tier === 'lifetime' ? '永久使用' : licenseData.tier === 'yearly' ? '年費' : licenseData.tier}</p>`;
             content += `<p><strong>席次：</strong>${licenseData.seats || 1}</p>`;
             content += `<p><strong>訂閱來源：</strong><span style="color: #0f3dde; font-weight: 600;">${sourceDisplay}</span></p>`;
             content += `<p><strong>到期時間：</strong>${expiresAt}</p>`;
@@ -1143,7 +1143,7 @@ async function viewUser(userId) {
                 
                 content += `<tr>`;
                 content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.order_id || order.id}</td>`;
-                content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.plan_type === 'monthly' ? '月費' : '年費'}</td>`;
+                content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.plan_type === 'lifetime' ? '永久使用' : order.plan_type === 'yearly' ? '年費' : order.plan_type || '-'}</td>`;
                 content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">NT$${order.amount?.toLocaleString() || 0}</td>`;
                 content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${paymentMethodDisplay}</td>`;
                 content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.payment_status === 'paid' ? '✅ 已付款' : '⏳ 待付款'}</td>`;
@@ -2740,8 +2740,8 @@ async function toggleSubscribe(userId, subscribe) {
 }
 
 function showSubscriptionModal(userId) {
-    // 重置表單
-    document.querySelector('input[name="subscription-period"][value="monthly"]').checked = true;
+    // 重置表單（預設為年費）
+    document.querySelector('input[name="subscription-period"][value="yearly"]').checked = true;
     document.getElementById('subscription-note').value = '';
     
     // 初始化樣式
@@ -2756,20 +2756,15 @@ function showSubscriptionModal(userId) {
 
 function updateSubscriptionPeriod(period) {
     // 更新選中的樣式
-    const monthlyLabel = document.getElementById('subscription-monthly-label');
     const yearlyLabel = document.getElementById('subscription-yearly-label');
     
-    if (monthlyLabel && yearlyLabel) {
-        if (period === 'monthly') {
-            monthlyLabel.style.borderColor = '#3b82f6';
-            monthlyLabel.style.backgroundColor = '#eff6ff';
-            yearlyLabel.style.borderColor = '#e5e7eb';
-            yearlyLabel.style.backgroundColor = 'transparent';
-        } else {
+    if (yearlyLabel) {
+        if (period === 'yearly') {
             yearlyLabel.style.borderColor = '#3b82f6';
             yearlyLabel.style.backgroundColor = '#eff6ff';
-            monthlyLabel.style.borderColor = '#e5e7eb';
-            monthlyLabel.style.backgroundColor = 'transparent';
+        } else {
+            yearlyLabel.style.borderColor = '#e5e7eb';
+            yearlyLabel.style.backgroundColor = 'transparent';
         }
     }
 }
@@ -2783,7 +2778,7 @@ function handleModalClick(event, modalId) {
 
 // 初始化訂閱期限選擇樣式
 function initSubscriptionPeriodStyles() {
-    updateSubscriptionPeriod();
+    updateSubscriptionPeriod('yearly');
 }
 
 async function confirmSubscription() {
@@ -2794,7 +2789,7 @@ async function confirmSubscription() {
     
     // 獲取選中的訂閱期限
     const selectedPeriod = document.querySelector('input[name="subscription-period"]:checked').value;
-    const subscriptionDays = selectedPeriod === 'yearly' ? 365 : 30;
+    const subscriptionDays = selectedPeriod === 'yearly' ? 365 : (selectedPeriod === 'lifetime' ? 36500 : 365);
     
     // 獲取備註
     const note = document.getElementById('subscription-note').value.trim();
@@ -2833,7 +2828,7 @@ async function executeSubscriptionToggle(userId, subscribe, subscriptionDays, no
         
         if (response.ok) {
             const result = await response.json();
-            const periodText = subscribe && subscriptionDays === 365 ? '年費' : subscribe && subscriptionDays === 30 ? '月費' : '';
+            const periodText = subscribe && subscriptionDays === 365 ? '年費' : subscribe && subscriptionDays >= 36500 ? '永久使用' : '';
             const message = subscribe ? `已啟用訂閱${periodText ? `（${periodText}）` : ''}` : '已取消訂閱';
             showToast(message, 'success');
             
@@ -3184,7 +3179,7 @@ async function loadOrders() {
                         </div>
                         <div class="mobile-card-row">
                             <span class="mobile-card-label">方案</span>
-                            <span class="mobile-card-value">${order.plan_type === 'monthly' ? '月費' : '年費'}</span>
+                            <span class="mobile-card-value">${order.plan_type === 'lifetime' ? '永久使用' : order.plan_type === 'yearly' ? '年費' : order.plan_type || '-'}</span>
                         </div>
                         <div class="mobile-card-row">
                             <span class="mobile-card-label">金額</span>
@@ -3282,7 +3277,7 @@ async function loadOrders() {
                             <span style="font-size: 0.85rem; color: #64748b;">${escapeHtml(order.user_email || '')}</span>
                         </div>
                     </td>
-                    <td>${order.plan_type === 'monthly' ? '月費' : '年費'}</td>
+                    <td>${order.plan_type === 'lifetime' ? '永久使用' : order.plan_type === 'yearly' ? '年費' : order.plan_type || '-'}</td>
                     <td>NT$${order.amount?.toLocaleString() || 0}</td>
                     <td>${escapeHtml(order.payment_method || '-')}</td>
                     <td>
@@ -3483,7 +3478,7 @@ async function viewCleanupLogDetail(logId) {
                     <tr>
                         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(order.order_id || '-')}</td>
                         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml((order.user_id || '').substring(0, 16))}...</td>
-                        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(order.plan_type === 'monthly' ? '月費' : order.plan_type === 'yearly' ? '年費' : order.plan_type || '-')}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(order.plan_type === 'lifetime' ? '永久使用' : order.plan_type === 'yearly' ? '年費' : order.plan_type || '-')}</td>
                         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">NT$${(order.amount || 0).toLocaleString()}</td>
                         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(formatDateTime(order.created_at))}</td>
                     </tr>
@@ -3626,7 +3621,7 @@ async function loadLicenseActivations() {
                         </div>
                         <div class="mobile-card-row">
                             <span class="mobile-card-label">方案</span>
-                            <span class="mobile-card-value">${activation.plan_type === 'monthly' ? '月費' : '年費'}</span>
+                            <span class="mobile-card-value">${activation.plan_type === 'lifetime' ? '永久使用' : activation.plan_type === 'yearly' ? '年費' : activation.plan_type || '-'}</span>
                         </div>
                         <div class="mobile-card-row">
                             <span class="mobile-card-label">金額</span>
@@ -3714,7 +3709,7 @@ async function loadLicenseActivations() {
                     <td>${activation.channel || '-'}</td>
                     <td>${activation.order_id || '-'}</td>
                     <td>${activation.email || '-'}</td>
-                    <td>${activation.plan_type === 'monthly' ? '月費' : '年費'}</td>
+                    <td>${activation.plan_type === 'lifetime' ? '永久使用' : activation.plan_type === 'yearly' ? '年費' : activation.plan_type || '-'}</td>
                     <td>NT$${activation.amount?.toLocaleString() || 0}</td>
                     <td>${statusBadge}</td>
                     <td>${formatDate(activation.link_expires_at)}</td>
