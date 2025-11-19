@@ -945,6 +945,7 @@ async function loadUsers() {
                         </button>
                         <button class="btn-action btn-view" onclick="viewUser('${user.user_id}')" type="button">查看詳情</button>
                         <button class="btn-action btn-promote" onclick="promoteToAdmin('${user.email}')" type="button" title="提升為管理員">⬆️ 提權</button>
+                        <button class="btn-action btn-lifetime" onclick="upgradeToLifetime('${user.user_id}')" type="button" title="升級為永久使用方案">⭐ 升級永久資格</button>
                     </div>
                 </div>
             `;
@@ -982,6 +983,7 @@ async function loadUsers() {
                         </button>
                         <button class="btn-action btn-view" onclick="viewUser('${user.user_id}')" type="button">查看</button>
                         <button class="btn-action btn-promote" onclick="promoteToAdmin('${user.email}')" type="button" title="提升為管理員">⬆️ 提權</button>
+                        <button class="btn-action btn-lifetime" onclick="upgradeToLifetime('${user.user_id}')" type="button" title="升級為永久使用方案">⭐ 升級永久資格</button>
                     </td>
                 </tr>
             `;
@@ -1068,7 +1070,16 @@ async function viewUser(userId) {
             
             content += `<div style="margin-top: 16px; padding: 12px; background: #f0f9ff; border-radius: 8px;">`;
             content += `<h4 style="margin-bottom: 8px;">🔑 授權資訊</h4>`;
-            content += `<p><strong>等級：</strong>${licenseData.tier === 'lifetime' ? '永久使用' : licenseData.tier === 'yearly' ? '年費' : licenseData.tier}</p>`;
+            // 只顯示 yearly 和 lifetime，其他顯示為「未知」
+            let tierDisplay = '未知';
+            if (licenseData.tier === 'lifetime') {
+                tierDisplay = '永久使用';
+            } else if (licenseData.tier === 'yearly') {
+                tierDisplay = '年費';
+            } else if (licenseData.tier && licenseData.tier !== 'none') {
+                tierDisplay = licenseData.tier; // 顯示原始值（用於調試）
+            }
+            content += `<p><strong>等級：</strong>${tierDisplay}</p>`;
             content += `<p><strong>席次：</strong>${licenseData.seats || 1}</p>`;
             content += `<p><strong>訂閱來源：</strong><span style="color: #0f3dde; font-weight: 600;">${sourceDisplay}</span></p>`;
             content += `<p><strong>到期時間：</strong>${expiresAt}</p>`;
@@ -2759,14 +2770,19 @@ function showSubscriptionModal(userId) {
 function updateSubscriptionPeriod(period) {
     // 更新選中的樣式
     const yearlyLabel = document.getElementById('subscription-yearly-label');
+    const lifetimeLabel = document.getElementById('subscription-lifetime-label');
     
-    if (yearlyLabel) {
+    if (yearlyLabel && lifetimeLabel) {
         if (period === 'yearly') {
             yearlyLabel.style.borderColor = '#3b82f6';
             yearlyLabel.style.backgroundColor = '#eff6ff';
-        } else {
+            lifetimeLabel.style.borderColor = '#e5e7eb';
+            lifetimeLabel.style.backgroundColor = 'transparent';
+        } else if (period === 'lifetime') {
             yearlyLabel.style.borderColor = '#e5e7eb';
             yearlyLabel.style.backgroundColor = 'transparent';
+            lifetimeLabel.style.borderColor = '#3b82f6';
+            lifetimeLabel.style.backgroundColor = '#eff6ff';
         }
     }
 }
@@ -3069,6 +3085,41 @@ async function promoteToAdmin(email) {
     }
 }
 
+// 升級為永久使用方案
+async function upgradeToLifetime(userId) {
+    if (!confirm('確定要將此用戶升級為永久使用方案嗎？\n\n升級後用戶將擁有：\n- IP 人設規劃功能\n- 一鍵生成（無限制次數）\n- 創作者資料庫（PDF/CSV 下載）')) {
+        return;
+    }
+    
+    try {
+        const requestBody = {
+            is_subscribed: true,
+            subscription_days: 36500,  // 永久使用
+            admin_note: '管理員手動升級為永久使用方案'
+        };
+        
+        const response = await adminFetch(`${API_BASE_URL}/admin/users/${userId}/subscription`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+        
+        if (response.ok) {
+            showToast('✅ 已升級為永久使用方案', 'success');
+            // 重新載入用戶列表
+            loadUsers();
+        } else {
+            const error = await response.json();
+            showToast(error.error || '升級失敗', 'error');
+        }
+    } catch (error) {
+        console.error('升級永久資格失敗:', error);
+        showToast('升級失敗，請稍後再試', 'error');
+    }
+}
+
 // 載入管理員列表
 async function loadAdmins() {
     try {
@@ -3278,6 +3329,7 @@ async function resetAdminPassword(adminId) {
 
 // 確保函數在全局作用域中可用
 window.promoteToAdmin = promoteToAdmin;
+window.upgradeToLifetime = upgradeToLifetime;
 window.deactivateAdmin = deactivateAdmin;
 window.activateAdmin = activateAdmin;
 window.resetAdminPassword = resetAdminPassword;

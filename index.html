@@ -632,26 +632,26 @@
                 <div style="margin-bottom: 20px;">
                     <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">訂閱期限</label>
                     <div style="display: flex; gap: 12px;">
-                        <label id="subscription-monthly-label" style="flex: 1; display: flex; align-items: center; padding: 12px; border: 2px solid #3b82f6; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: #eff6ff;" 
-                               onclick="document.querySelector('input[name=\"subscription-period\"][value=\"monthly\"]').click();"
-                               onmouseover="if(!document.querySelector('input[name=\"subscription-period\"][value=\"monthly\"]').checked) this.style.borderColor='#3b82f6'; this.style.backgroundColor='#eff6ff';" 
-                               onmouseout="if(!document.querySelector('input[name=\"subscription-period\"][value=\"monthly\"]').checked) { this.style.borderColor='#e5e7eb'; this.style.backgroundColor='transparent'; }">
-                            <input type="radio" name="subscription-period" value="monthly" checked style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;" 
-                                   onchange="updateSubscriptionPeriod(this.value)">
-                            <div>
-                                <div style="font-weight: 600; color: #1f2937;">月費</div>
-                                <div style="font-size: 0.875rem; color: #6b7280;">30 天</div>
-                            </div>
-                        </label>
-                        <label id="subscription-yearly-label" style="flex: 1; display: flex; align-items: center; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;" 
+                        <label id="subscription-yearly-label" style="flex: 1; display: flex; align-items: center; padding: 12px; border: 2px solid #3b82f6; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: #eff6ff;" 
                                onclick="document.querySelector('input[name=\"subscription-period\"][value=\"yearly\"]').click();"
                                onmouseover="if(!document.querySelector('input[name=\"subscription-period\"][value=\"yearly\"]').checked) this.style.borderColor='#3b82f6'; this.style.backgroundColor='#eff6ff';" 
                                onmouseout="if(!document.querySelector('input[name=\"subscription-period\"][value=\"yearly\"]').checked) { this.style.borderColor='#e5e7eb'; this.style.backgroundColor='transparent'; }">
-                            <input type="radio" name="subscription-period" value="yearly" style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;" 
+                            <input type="radio" name="subscription-period" value="yearly" checked style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;" 
                                    onchange="updateSubscriptionPeriod(this.value)">
                             <div>
                                 <div style="font-weight: 600; color: #1f2937;">年費</div>
                                 <div style="font-size: 0.875rem; color: #6b7280;">365 天</div>
+                            </div>
+                        </label>
+                        <label id="subscription-lifetime-label" style="flex: 1; display: flex; align-items: center; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: transparent;" 
+                               onclick="document.querySelector('input[name=\"subscription-period\"][value=\"lifetime\"]').click();"
+                               onmouseover="if(!document.querySelector('input[name=\"subscription-period\"][value=\"lifetime\"]').checked) this.style.borderColor='#3b82f6'; this.style.backgroundColor='#eff6ff';" 
+                               onmouseout="if(!document.querySelector('input[name=\"subscription-period\"][value=\"lifetime\"]').checked) { this.style.borderColor='#e5e7eb'; this.style.backgroundColor='transparent'; }">
+                            <input type="radio" name="subscription-period" value="lifetime" style="margin-right: 8px; width: 18px; height: 18px; cursor: pointer;" 
+                                   onchange="updateSubscriptionPeriod(this.value)">
+                            <div>
+                                <div style="font-weight: 600; color: #1f2937;">永久使用</div>
+                                <div style="font-size: 0.875rem; color: #6b7280;">一次購買，永久使用</div>
                             </div>
                         </label>
                     </div>
