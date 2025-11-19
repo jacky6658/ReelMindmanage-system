@@ -944,6 +944,7 @@ async function loadUsers() {
                             ${isSubscribed ? '❌ 取消訂閱' : '✅ 啟用訂閱'}
                         </button>
                         <button class="btn-action btn-view" onclick="viewUser('${user.user_id}')" type="button">查看詳情</button>
+                        <button class="btn-action btn-promote" onclick="promoteToAdmin('${user.email}')" type="button" title="提升為管理員">⬆️ 提權</button>
                     </div>
                 </div>
             `;
@@ -980,6 +981,7 @@ async function loadUsers() {
                             ${isSubscribed ? '❌ 取消訂閱' : '✅ 啟用訂閱'}
                         </button>
                         <button class="btn-action btn-view" onclick="viewUser('${user.user_id}')" type="button">查看</button>
+                        <button class="btn-action btn-promote" onclick="promoteToAdmin('${user.email}')" type="button" title="提升為管理員">⬆️ 提權</button>
                     </td>
                 </tr>
             `;
@@ -3008,10 +3010,277 @@ async function loadAdminSettings() {
             document.getElementById('current-admin-name').textContent = '未登入';
             document.getElementById('login-time').textContent = '-';
         }
+        
+        // 載入管理員列表
+        await loadAdmins();
     } catch (error) {
         console.error('載入管理員設定失敗:', error);
     }
 }
+
+// ===== 管理員管理功能 =====
+
+// 提權為管理員
+async function promoteToAdmin(email) {
+    if (!confirm(`確定要將 ${email} 提升為管理員嗎？\n\n系統將自動生成一個隨機密碼，請妥善保存並傳遞給新管理員。`)) {
+        return;
+    }
+    
+    try {
+        const token = getAdminToken();
+        const response = await fetch(`${API_BASE_URL}/admin/admins/promote`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, name: '' })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            if (data.default_password) {
+                // 顯示預設密碼（重要！）
+                const passwordMessage = `✅ 提權成功！\n\n用戶 ${email} 已成為管理員。\n\n⚠️ 預設密碼：${data.default_password}\n\n請將此密碼安全地傳遞給新管理員，建議首次登入後立即修改。`;
+                alert(passwordMessage);
+                // 同時複製到剪貼板（如果支援）
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(data.default_password).then(() => {
+                        console.log('密碼已複製到剪貼板');
+                    }).catch(() => {});
+                }
+            } else {
+                showToast('✅ 提權成功', 'success');
+            }
+            // 重新載入用戶列表和管理員列表
+            if (document.getElementById('users').classList.contains('active')) {
+                loadUsers();
+            }
+            if (document.getElementById('admin-settings').classList.contains('active')) {
+                loadAdmins();
+            }
+        } else {
+            showToast(data.error || '提權失敗', 'error');
+        }
+    } catch (error) {
+        console.error('提權錯誤:', error);
+        showToast('網路錯誤，請稍後再試', 'error');
+    }
+}
+
+// 載入管理員列表
+async function loadAdmins() {
+    try {
+        const response = await adminFetch(`${API_BASE_URL}/admin/admins`);
+        const data = await response.json();
+        
+        if (data.success && data.admins) {
+            displayAdmins(data.admins);
+        } else {
+            showToast('載入管理員列表失敗', 'error');
+        }
+    } catch (error) {
+        console.error('載入管理員列表錯誤:', error);
+        showToast('載入管理員列表失敗', 'error');
+    }
+}
+
+// 顯示管理員列表
+function displayAdmins(admins) {
+    const container = document.getElementById('admin-settings');
+    if (!container) return;
+    
+    // 查找或創建管理員列表容器
+    let adminsContainer = document.getElementById('admins-list-container');
+    if (!adminsContainer) {
+        adminsContainer = document.createElement('div');
+        adminsContainer.id = 'admins-list-container';
+        adminsContainer.style.cssText = 'margin-top: 20px;';
+        
+        // 插入到管理員設定頁面中
+        const currentAdminDiv = document.querySelector('#admin-settings .current-admin-info');
+        if (currentAdminDiv && currentAdminDiv.parentNode) {
+            currentAdminDiv.parentNode.insertBefore(adminsContainer, currentAdminDiv.nextSibling);
+        } else {
+            container.appendChild(adminsContainer);
+        }
+    }
+    
+    const isMobile = window.innerWidth <= 768;
+    
+    if (isMobile) {
+        // 手機版：卡片式佈局
+        adminsContainer.innerHTML = `
+            <h3 style="margin-bottom: 16px;">管理員列表</h3>
+            <div class="mobile-cards-container">
+                ${admins.map(admin => `
+                    <div class="mobile-card">
+                        <div class="mobile-card-header">
+                            <span class="mobile-card-title">${admin.name || '管理員'}</span>
+                            <span class="mobile-card-badge ${admin.is_active ? 'badge-success' : 'badge-danger'}">
+                                ${admin.is_active ? '啟用' : '停用'}
+                            </span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">Email</span>
+                            <span class="mobile-card-value">${admin.email}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">建立時間</span>
+                            <span class="mobile-card-value">${formatDateTime(admin.created_at)}</span>
+                        </div>
+                        <div class="mobile-card-actions">
+                            ${admin.is_active ? 
+                                `<button class="btn-action btn-danger" onclick="deactivateAdmin(${admin.id})" type="button">停用</button>` :
+                                `<button class="btn-action btn-success" onclick="activateAdmin(${admin.id})" type="button">啟用</button>`
+                            }
+                            <button class="btn-action btn-warning" onclick="resetAdminPassword(${admin.id})" type="button">重置密碼</button>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    } else {
+        // 桌面版：表格佈局
+        adminsContainer.innerHTML = `
+            <h3 style="margin-bottom: 16px;">管理員列表</h3>
+            <div class="table-container">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
+                            <th style="padding: 12px; text-align: left;">ID</th>
+                            <th style="padding: 12px; text-align: left;">Email</th>
+                            <th style="padding: 12px; text-align: left;">名稱</th>
+                            <th style="padding: 12px; text-align: left;">狀態</th>
+                            <th style="padding: 12px; text-align: left;">建立時間</th>
+                            <th style="padding: 12px; text-align: left;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${admins.map(admin => `
+                            <tr style="border-bottom: 1px solid #e5e7eb;">
+                                <td style="padding: 12px;">${admin.id}</td>
+                                <td style="padding: 12px;">${admin.email}</td>
+                                <td style="padding: 12px;">${admin.name || '-'}</td>
+                                <td style="padding: 12px;">
+                                    <span class="badge ${admin.is_active ? 'badge-success' : 'badge-danger'}">
+                                        ${admin.is_active ? '啟用' : '停用'}
+                                    </span>
+                                </td>
+                                <td style="padding: 12px;">${formatDateTime(admin.created_at)}</td>
+                                <td style="padding: 12px;">
+                                    ${admin.is_active ? 
+                                        `<button class="btn-action btn-danger" onclick="deactivateAdmin(${admin.id})" type="button">停用</button>` :
+                                        `<button class="btn-action btn-success" onclick="activateAdmin(${admin.id})" type="button">啟用</button>`
+                                    }
+                                    <button class="btn-action btn-warning" onclick="resetAdminPassword(${admin.id})" type="button">重置密碼</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+}
+
+// 停用管理員
+async function deactivateAdmin(adminId) {
+    if (!confirm('確定要停用此管理員的權限嗎？')) {
+        return;
+    }
+    
+    try {
+        const response = await adminFetch(`${API_BASE_URL}/admin/admins/${adminId}/deactivate`, {
+            method: 'PUT'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            showToast(data.message || '✅ 已停用管理員權限', 'success');
+            loadAdmins();
+        } else {
+            showToast(data.error || '停用失敗', 'error');
+        }
+    } catch (error) {
+        console.error('停用管理員錯誤:', error);
+        showToast('操作失敗，請稍後再試', 'error');
+    }
+}
+
+// 啟用管理員
+async function activateAdmin(adminId) {
+    try {
+        const response = await adminFetch(`${API_BASE_URL}/admin/admins/${adminId}/activate`, {
+            method: 'PUT'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            showToast(data.message || '✅ 已啟用管理員權限', 'success');
+            loadAdmins();
+        } else {
+            showToast(data.error || '啟用失敗', 'error');
+        }
+    } catch (error) {
+        console.error('啟用管理員錯誤:', error);
+        showToast('操作失敗，請稍後再試', 'error');
+    }
+}
+
+// 重置管理員密碼
+async function resetAdminPassword(adminId) {
+    const newPassword = prompt('請輸入新密碼（至少 8 個字元）：');
+    
+    if (!newPassword) {
+        return;
+    }
+    
+    if (newPassword.length < 8) {
+        showToast('密碼長度至少需要 8 個字元', 'error');
+        return;
+    }
+    
+    if (!confirm(`確定要重置此管理員的密碼嗎？\n\n新密碼：${newPassword}\n\n請將此密碼安全地傳遞給管理員。`)) {
+        return;
+    }
+    
+    try {
+        const response = await adminFetch(`${API_BASE_URL}/admin/admins/${adminId}/password`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ password: newPassword })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok && data.success) {
+            showToast(data.message || '✅ 密碼已重置', 'success');
+            // 複製密碼到剪貼板
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(newPassword).then(() => {
+                    console.log('密碼已複製到剪貼板');
+                }).catch(() => {});
+            }
+        } else {
+            showToast(data.error || '重置密碼失敗', 'error');
+        }
+    } catch (error) {
+        console.error('重置密碼錯誤:', error);
+        showToast('操作失敗，請稍後再試', 'error');
+    }
+}
+
+// 確保函數在全局作用域中可用
+window.promoteToAdmin = promoteToAdmin;
+window.deactivateAdmin = deactivateAdmin;
+window.activateAdmin = activateAdmin;
+window.resetAdminPassword = resetAdminPassword;
 
 // ===== 檔案選擇處理 =====
 function handleFileSelect(event) {
