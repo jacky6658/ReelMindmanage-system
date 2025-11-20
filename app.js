@@ -1,5 +1,5 @@
 // API 基礎 URL
-const API_BASE_URL = 'https://aivideobackend.zeabur.app/api';
+const API_BASE_URL = 'https://api.aijob.com.tw/api';
 
 // 全域變數
 let charts = {};
@@ -143,6 +143,17 @@ async function adminFetch(url, options = {}) {
     
     const token = getAdminToken();
     
+    // 確保 URL 是完整的（如果不是，則使用 API_BASE_URL）
+    let fullUrl = url;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        // 如果是相對路徑，確保以 / 開頭
+        if (!url.startsWith('/')) {
+            url = '/' + url;
+        }
+        // 使用 API_BASE_URL（已經包含 /api）
+        fullUrl = API_BASE_URL + url;
+    }
+    
     const headers = {
         ...options.headers,
         'Authorization': `Bearer ${token}`
@@ -161,7 +172,7 @@ async function adminFetch(url, options = {}) {
     }
     
     try {
-        const response = await fetch(url, { ...options, headers });
+        const response = await fetch(fullUrl, { ...options, headers });
         
         // 處理 403 錯誤（可能是 CSRF Token 驗證失敗）
         if (response.status === 403) {
@@ -178,7 +189,7 @@ async function adminFetch(url, options = {}) {
                             'Authorization': `Bearer ${token}`,
                             'X-CSRF-Token': csrfToken
                         };
-                        const retryResponse = await fetch(url, { ...options, headers: retryHeaders });
+                        const retryResponse = await fetch(fullUrl, { ...options, headers: retryHeaders });
                         if (retryResponse.ok) {
                             return retryResponse;
                         }
@@ -330,7 +341,7 @@ function showLoginRequired(message = '請選擇登入方式') {
     // Google 登入按鈕
     document.getElementById('admin-login-btn').onclick = function() {
         // 使用與主前端相同的 Google OAuth 流程
-        const backendUrl = 'https://aivideobackend.zeabur.app';
+        const backendUrl = 'https://api.aijob.com.tw';
         // 使用當前頁面作為 redirect_uri，並在 URL 參數中標記為 admin
         const redirectUri = encodeURIComponent(window.location.origin + window.location.pathname + '?admin_login=true');
         const authUrl = `${backendUrl}/api/auth/google?redirect_uri=${redirectUri}`;
@@ -366,7 +377,7 @@ function showLoginRequired(message = '請選擇登入方式') {
         }
         
         try {
-            const response = await fetch('https://aivideobackend.zeabur.app/api/admin/auth/login', {
+            const response = await fetch('https://api.aijob.com.tw/api/admin/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
