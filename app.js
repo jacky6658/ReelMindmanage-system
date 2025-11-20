@@ -647,12 +647,18 @@ function loadSectionData(section) {
         // case 'generations': // 已隱藏
         //     loadGenerations();
         //     break;
-        case 'analytics':
-            loadAnalytics();
-            break;
-        case 'admin-settings':
-            loadAdminSettings();
-            break;
+            case 'analytics':
+                loadAnalytics();
+                break;
+            case 'usage-statistics':
+                loadUsageStatistics();
+                break;
+            case 'llm-keys':
+                loadLlmKeysStatus();
+                break;
+            case 'admin-settings':
+                loadAdminSettings();
+                break;
     }
 }
 
@@ -2920,6 +2926,336 @@ async function exportCSV(type) {
         console.error('匯出 CSV 失敗:', error);
         showToast('匯出 CSV 失敗', 'error');
     }
+}
+
+// ===== 使用統計 =====
+async function loadUsageStatistics() {
+    try {
+        const startDate = document.getElementById('usage-start-date')?.value || null;
+        const endDate = document.getElementById('usage-end-date')?.value || null;
+        
+        let url = `${API_BASE_URL}/admin/usage-statistics`;
+        const params = new URLSearchParams();
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        if (params.toString()) url += '?' + params.toString();
+        
+        const response = await adminFetch(url);
+        const data = await response.json();
+        
+        // 更新統計卡片
+        document.getElementById('total-events').textContent = data.total_events || 0;
+        document.getElementById('active-users-count').textContent = data.active_users || 0;
+        document.getElementById('pdf-downloads').textContent = data.download_statistics?.pdf_downloads || 0;
+        document.getElementById('csv-downloads').textContent = data.download_statistics?.csv_downloads || 0;
+        
+        // 繪製圖表
+        drawEventTypeChart(data.event_type_distribution || {});
+        drawEventCategoryChart(data.event_category_distribution || {});
+        drawDailyTrendChart(data.daily_trend || []);
+        
+        // 顯示最活躍用戶
+        displayTopUsers(data.top_active_users || []);
+    } catch (error) {
+        console.error('載入使用統計失敗:', error);
+        showToast('載入使用統計失敗', 'error');
+    }
+}
+
+function drawEventTypeChart(data) {
+    const canvas = document.getElementById('event-type-chart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+    
+    if (labels.length === 0) return;
+    
+    // 簡單的柱狀圖繪製
+    const maxValue = Math.max(...values, 1);
+    const barWidth = canvas.width / labels.length;
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#3b82f6';
+    
+    values.forEach((value, index) => {
+        const barHeight = (value / maxValue) * (canvas.height - 40);
+        ctx.fillRect(index * barWidth + 10, canvas.height - barHeight - 20, barWidth - 20, barHeight);
+        ctx.fillStyle = '#1f2937';
+        ctx.font = '12px Arial';
+        ctx.fillText(labels[index], index * barWidth + 10, canvas.height - 5);
+        ctx.fillStyle = '#3b82f6';
+    });
+}
+
+function drawEventCategoryChart(data) {
+    const canvas = document.getElementById('event-category-chart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+    
+    if (labels.length === 0) return;
+    
+    // 簡單的圓餅圖繪製
+    const total = values.reduce((sum, val) => sum + val, 0);
+    if (total === 0) return;
+    
+    let currentAngle = 0;
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    values.forEach((value, index) => {
+        const sliceAngle = (value / total) * 2 * Math.PI;
+        ctx.beginPath();
+        ctx.moveTo(canvas.width / 2, canvas.height / 2);
+        ctx.arc(canvas.width / 2, canvas.height / 2, Math.min(canvas.width, canvas.height) / 2 - 20, currentAngle, currentAngle + sliceAngle);
+        ctx.closePath();
+        ctx.fillStyle = colors[index % colors.length];
+        ctx.fill();
+        currentAngle += sliceAngle;
+    });
+}
+
+function drawDailyTrendChart(data) {
+    const canvas = document.getElementById('daily-trend-chart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (data.length === 0) return;
+    
+    const maxValue = Math.max(...data.map(d => d.count), 1);
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    data.forEach((point, index) => {
+        const x = (index / (data.length - 1 || 1)) * (canvas.width - 40) + 20;
+        const y = canvas.height - 20 - (point.count / maxValue) * (canvas.height - 40);
+        if (index === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    
+    ctx.stroke();
+}
+
+function displayTopUsers(users) {
+    const container = document.getElementById('top-users-table');
+    if (!container) return;
+    
+    if (users.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #6b7280;">暫無數據</div>';
+        return;
+    }
+    
+    let html = `
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>排名</th>
+                    <th>用戶名稱</th>
+                    <th>Email</th>
+                    <th>事件次數</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    users.forEach((user, index) => {
+        html += `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${escapeHtml(user.name || '未知用戶')}</td>
+                <td>${escapeHtml(user.email || '-')}</td>
+                <td>${user.event_count || 0}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// ===== LLM Key 綁定監控 =====
+async function loadLlmKeysStatus() {
+    try {
+        const response = await adminFetch(`${API_BASE_URL}/admin/llm-keys`);
+        const data = await response.json();
+        
+        // 更新統計卡片
+        document.getElementById('llm-total-users').textContent = data.total_users || 0;
+        document.getElementById('llm-bound-users').textContent = data.bound_users_count || 0;
+        document.getElementById('llm-unbound-users').textContent = data.unbound_users_count || 0;
+        document.getElementById('llm-total-bindings').textContent = data.total_bindings || 0;
+        
+        // 繪製圖表
+        drawLlmProviderChart(data.provider_distribution || {});
+        drawLlmBindingTrendChart(data.binding_trend || []);
+        
+        // 顯示已綁定用戶列表
+        displayLlmBoundUsers(data.bound_users || []);
+    } catch (error) {
+        console.error('載入 LLM Key 綁定狀態失敗:', error);
+        showToast('載入 LLM Key 綁定狀態失敗', 'error');
+    }
+}
+
+function drawLlmProviderChart(data) {
+    const canvas = document.getElementById('llm-provider-chart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    const labels = Object.keys(data);
+    const values = Object.values(data);
+    
+    if (labels.length === 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('暫無數據', canvas.width / 2, canvas.height / 2);
+        return;
+    }
+    
+    // 簡單的圓餅圖繪製
+    const total = values.reduce((sum, val) => sum + val, 0);
+    if (total === 0) return;
+    
+    let currentAngle = 0;
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    values.forEach((value, index) => {
+        const sliceAngle = (value / total) * 2 * Math.PI;
+        ctx.beginPath();
+        ctx.moveTo(canvas.width / 2, canvas.height / 2);
+        ctx.arc(canvas.width / 2, canvas.height / 2, Math.min(canvas.width, canvas.height) / 2 - 20, currentAngle, currentAngle + sliceAngle);
+        ctx.closePath();
+        ctx.fillStyle = colors[index % colors.length];
+        ctx.fill();
+        
+        // 添加標籤
+        const labelAngle = currentAngle + sliceAngle / 2;
+        const labelX = canvas.width / 2 + Math.cos(labelAngle) * (Math.min(canvas.width, canvas.height) / 2 - 10);
+        const labelY = canvas.height / 2 + Math.sin(labelAngle) * (Math.min(canvas.width, canvas.height) / 2 - 10);
+        ctx.fillStyle = '#1f2937';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${labels[index]}: ${value}`, labelX, labelY);
+        
+        currentAngle += sliceAngle;
+    });
+}
+
+function drawLlmBindingTrendChart(data) {
+    const canvas = document.getElementById('llm-binding-trend-chart');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (data.length === 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('暫無數據', canvas.width / 2, canvas.height / 2);
+        return;
+    }
+    
+    const maxValue = Math.max(...data.map(d => d.count), 1);
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    
+    data.forEach((point, index) => {
+        const x = (index / (data.length - 1 || 1)) * (canvas.width - 40) + 20;
+        const y = canvas.height - 20 - (point.count / maxValue) * (canvas.height - 40);
+        if (index === 0) {
+            ctx.moveTo(x, y);
+        } else {
+            ctx.lineTo(x, y);
+        }
+    });
+    
+    ctx.stroke();
+}
+
+function displayLlmBoundUsers(users) {
+    const container = document.getElementById('llm-bound-users-table');
+    if (!container) return;
+    
+    if (users.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 40px; color: #6b7280;">暫無綁定記錄</div>';
+        return;
+    }
+    
+    let html = `
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>用戶名稱</th>
+                    <th>Email</th>
+                    <th>Provider</th>
+                    <th>Key 後4碼</th>
+                    <th>模型</th>
+                    <th>綁定時間</th>
+                    <th>最後更新</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    users.forEach(user => {
+        const createdDate = user.created_at ? new Date(user.created_at).toLocaleString('zh-TW', {
+            timeZone: 'Asia/Taipei',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        }) : '-';
+        const updatedDate = user.updated_at ? new Date(user.updated_at).toLocaleString('zh-TW', {
+            timeZone: 'Asia/Taipei',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        }) : '-';
+        
+        html += `
+            <tr>
+                <td>${escapeHtml(user.name || '未知用戶')}</td>
+                <td>${escapeHtml(user.email || '-')}</td>
+                <td><span class="badge ${user.provider === 'gemini' ? 'badge-info' : 'badge-success'}">${user.provider === 'gemini' ? 'Gemini' : user.provider === 'openai' ? 'OpenAI' : user.provider}</span></td>
+                <td>${user.last4 ? `****${escapeHtml(user.last4)}` : '-'}</td>
+                <td>${escapeHtml(user.model_name || '-')}</td>
+                <td>${createdDate}</td>
+                <td>${updatedDate}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+            </tbody>
+        </table>
+    `;
+    
+    container.innerHTML = html;
 }
 
 // ===== 完整資料匯出功能 =====

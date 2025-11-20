@@ -87,6 +87,14 @@
                     <span class="icon">📈</span>
                     <span>數據分析</span>
                 </a>
+                <a href="#" class="nav-item" data-section="usage-statistics">
+                    <span class="icon">📊</span>
+                    <span>使用統計</span>
+                </a>
+                <a href="#" class="nav-item" data-section="llm-keys">
+                    <span class="icon">🔑</span>
+                    <span>LLM Key 綁定</span>
+                </a>
                 <a href="#" class="nav-item" data-section="admin-settings">
                     <span class="icon">⚙️</span>
                     <span>管理員設定</span>
@@ -589,6 +597,121 @@
                     <div class="analytics-card">
                         <h3>內容類型分布</h3>
                         <canvas id="content-type-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LLM Key 綁定監控頁面 -->
+            <div class="section" id="llm-keys">
+                <div class="section-header">
+                    <h2>LLM Key 綁定監控</h2>
+                </div>
+                <div class="stats-grid" style="margin-bottom: 24px;">
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-info">
+                            <h3 id="llm-total-users">-</h3>
+                            <p>總用戶數</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🔑</div>
+                        <div class="stat-info">
+                            <h3 id="llm-bound-users">-</h3>
+                            <p>已綁定用戶數</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">❌</div>
+                        <div class="stat-info">
+                            <h3 id="llm-unbound-users">-</h3>
+                            <p>未綁定用戶數</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-info">
+                            <h3 id="llm-total-bindings">-</h3>
+                            <p>總綁定數</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h3>Provider 分布</h3>
+                        <canvas id="llm-provider-chart"></canvas>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>綁定趨勢（最近30天）</h3>
+                        <canvas id="llm-binding-trend-chart"></canvas>
+                    </div>
+                </div>
+                <div class="table-container" style="margin-top: 24px;">
+                    <h3 style="margin-bottom: 16px;">已綁定用戶列表</h3>
+                    <div id="llm-bound-users-table">
+                        <div style="text-align: center; padding: 40px; color: #6b7280;">載入中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 使用統計頁面 -->
+            <div class="section" id="usage-statistics">
+                <div class="section-header">
+                    <h2>使用統計</h2>
+                    <div class="section-actions">
+                        <input type="date" id="usage-start-date" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; margin-right: 8px;">
+                        <input type="date" id="usage-end-date" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; margin-right: 8px;">
+                        <button onclick="loadUsageStatistics()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">查詢</button>
+                    </div>
+                </div>
+                <div class="stats-grid" style="margin-bottom: 24px;">
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-info">
+                            <h3 id="total-events">-</h3>
+                            <p>總事件數</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-info">
+                            <h3 id="active-users-count">-</h3>
+                            <p>活躍用戶數</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📄</div>
+                        <div class="stat-info">
+                            <h3 id="pdf-downloads">-</h3>
+                            <p>PDF 下載次數</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📋</div>
+                        <div class="stat-info">
+                            <h3 id="csv-downloads">-</h3>
+                            <p>CSV 下載次數</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="analytics-grid">
+                    <div class="analytics-card">
+                        <h3>事件類型分布</h3>
+                        <canvas id="event-type-chart"></canvas>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>事件類別分布</h3>
+                        <canvas id="event-category-chart"></canvas>
+                    </div>
+                    <div class="analytics-card">
+                        <h3>每日事件趨勢（最近30天）</h3>
+                        <canvas id="daily-trend-chart"></canvas>
+                    </div>
+                </div>
+                <div class="table-container" style="margin-top: 24px;">
+                    <h3 style="margin-bottom: 16px;">最活躍用戶（前10名）</h3>
+                    <div id="top-users-table">
+                        <div style="text-align: center; padding: 40px; color: #6b7280;">載入中...</div>
                     </div>
                 </div>
             </div>
