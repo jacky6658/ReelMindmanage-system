@@ -1070,14 +1070,16 @@ async function viewUser(userId) {
             
             content += `<div style="margin-top: 16px; padding: 12px; background: #f0f9ff; border-radius: 8px;">`;
             content += `<h4 style="margin-bottom: 8px;">🔑 授權資訊</h4>`;
-            // 只顯示 yearly 和 lifetime，其他顯示為「未知」
-            let tierDisplay = '未知';
-            if (licenseData.tier === 'lifetime') {
-                tierDisplay = '永久使用';
-            } else if (licenseData.tier === 'yearly') {
-                tierDisplay = '年費';
-            } else if (licenseData.tier && licenseData.tier !== 'none') {
-                tierDisplay = licenseData.tier; // 顯示原始值（用於調試）
+            // 只顯示 yearly 和 lifetime，過濾 monthly 和 personal
+            let tierDisplay = '未訂閱';
+            if (licenseData && licenseData.tier && licenseData.tier !== 'none') {
+                if (licenseData.tier === 'lifetime') {
+                    tierDisplay = '永久使用';
+                } else if (licenseData.tier === 'yearly') {
+                    tierDisplay = '年費';
+                } else if (licenseData.tier === 'monthly' || licenseData.tier === 'personal') {
+                    tierDisplay = '需要升級（舊方案）';
+                }
             }
             content += `<p><strong>等級：</strong>${tierDisplay}</p>`;
             content += `<p><strong>席次：</strong>${licenseData.seats || 1}</p>`;
@@ -1156,7 +1158,7 @@ async function viewUser(userId) {
                 
                 content += `<tr>`;
                 content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.order_id || order.id}</td>`;
-                content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.plan_type === 'lifetime' ? '永久使用' : order.plan_type === 'yearly' ? '年費' : order.plan_type || '-'}</td>`;
+                content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.plan_type === 'lifetime' ? '永久使用' : order.plan_type === 'yearly' ? '年費' : (order.plan_type === 'monthly' || order.plan_type === 'personal') ? '舊方案（需升級）' : order.plan_type || '-'}</td>`;
                 content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">NT$${order.amount?.toLocaleString() || 0}</td>`;
                 content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${paymentMethodDisplay}</td>`;
                 content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.payment_status === 'paid' ? '✅ 已付款' : '⏳ 待付款'}</td>`;
@@ -3500,7 +3502,7 @@ async function loadOrders() {
                         </div>
                         <div class="mobile-card-row">
                             <span class="mobile-card-label">方案</span>
-                            <span class="mobile-card-value">${order.plan_type === 'lifetime' ? '永久使用' : order.plan_type === 'yearly' ? '年費' : order.plan_type || '-'}</span>
+                            <span class="mobile-card-value">${order.plan_type === 'lifetime' ? '永久使用' : order.plan_type === 'yearly' ? '年費' : (order.plan_type === 'monthly' || order.plan_type === 'personal') ? '舊方案（需升級）' : order.plan_type || '-'}</span>
                         </div>
                         <div class="mobile-card-row">
                             <span class="mobile-card-label">金額</span>
@@ -3598,7 +3600,7 @@ async function loadOrders() {
                             <span style="font-size: 0.85rem; color: #64748b;">${escapeHtml(order.user_email || '')}</span>
                         </div>
                     </td>
-                    <td>${order.plan_type === 'lifetime' ? '永久使用' : order.plan_type === 'yearly' ? '年費' : order.plan_type || '-'}</td>
+                    <td>${order.plan_type === 'lifetime' ? '永久使用' : order.plan_type === 'yearly' ? '年費' : (order.plan_type === 'monthly' || order.plan_type === 'personal') ? '舊方案（需升級）' : order.plan_type || '-'}</td>
                     <td>NT$${order.amount?.toLocaleString() || 0}</td>
                     <td>${escapeHtml(order.payment_method || '-')}</td>
                     <td>
@@ -3799,7 +3801,7 @@ async function viewCleanupLogDetail(logId) {
                     <tr>
                         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(order.order_id || '-')}</td>
                         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml((order.user_id || '').substring(0, 16))}...</td>
-                        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(order.plan_type === 'lifetime' ? '永久使用' : order.plan_type === 'yearly' ? '年費' : order.plan_type || '-')}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(order.plan_type === 'lifetime' ? '永久使用' : order.plan_type === 'yearly' ? '年費' : (order.plan_type === 'monthly' || order.plan_type === 'personal') ? '舊方案（需升級）' : order.plan_type || '-')}</td>
                         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">NT$${(order.amount || 0).toLocaleString()}</td>
                         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(formatDateTime(order.created_at))}</td>
                     </tr>
@@ -3942,7 +3944,7 @@ async function loadLicenseActivations() {
                         </div>
                         <div class="mobile-card-row">
                             <span class="mobile-card-label">方案</span>
-                            <span class="mobile-card-value">${activation.plan_type === 'lifetime' ? '永久使用' : activation.plan_type === 'yearly' ? '年費' : activation.plan_type || '-'}</span>
+                            <span class="mobile-card-value">${activation.plan_type === 'lifetime' ? '永久使用' : activation.plan_type === 'yearly' ? '年費' : (activation.plan_type === 'monthly' || activation.plan_type === 'personal') ? '舊方案（需升級）' : activation.plan_type || '-'}</span>
                         </div>
                         <div class="mobile-card-row">
                             <span class="mobile-card-label">金額</span>
@@ -4030,7 +4032,7 @@ async function loadLicenseActivations() {
                     <td>${activation.channel || '-'}</td>
                     <td>${activation.order_id || '-'}</td>
                     <td>${activation.email || '-'}</td>
-                    <td>${activation.plan_type === 'lifetime' ? '永久使用' : activation.plan_type === 'yearly' ? '年費' : activation.plan_type || '-'}</td>
+                    <td>${activation.plan_type === 'lifetime' ? '永久使用' : activation.plan_type === 'yearly' ? '年費' : (activation.plan_type === 'monthly' || activation.plan_type === 'personal') ? '舊方案（需升級）' : activation.plan_type || '-'}</td>
                     <td>NT$${activation.amount?.toLocaleString() || 0}</td>
                     <td>${statusBadge}</td>
                     <td>${formatDate(activation.link_expires_at)}</td>
