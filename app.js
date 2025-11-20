@@ -1063,7 +1063,9 @@ async function viewUser(userId) {
                     'portaly': 'Portaly',
                     'ppa': 'PPA',
                     'ecpay': '官網購買',
-                    'admin': '管理員手動啟用'
+                    'admin': '管理員手動啟用',
+                    'admin_manual': '管理員手動啟用',
+                    'admin_account': '管理員帳號'
                 };
                 sourceDisplay = sourceMap[licenseData.source] || licenseData.source;
             }
