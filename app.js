@@ -955,19 +955,6 @@ async function loadUsers(page = 1) {
                         <span class="mobile-card-value" id="mobile-subscribe-status-${user.user_id}">${subscribeStatus}</span>
                     </div>
                     <div class="mobile-card-row">
-                        <span class="mobile-card-label">LLM Key 綁定</span>
-                        <span class="mobile-card-value">${(user.has_llm_key || (user.llm_keys && user.llm_keys.length > 0)) ? 
-                            '<span class="badge badge-info">🔑 已綁定</span>' : 
-                            '<span class="badge" style="background: #e5e7eb; color: #6b7280;">未綁定</span>'}</span>
-                    </div>
-                    ${(user.has_llm_key || (user.llm_keys && user.llm_keys.length > 0)) && user.llm_keys ? 
-                        `<div class="mobile-card-row">
-                            <span class="mobile-card-label">綁定資訊</span>
-                            <span class="mobile-card-value" style="font-size: 0.85em; color: #64748b;">
-                                ${user.llm_keys.map(k => `${k.provider === 'gemini' ? 'Gemini' : k.provider === 'openai' ? 'OpenAI' : k.provider}${k.model_name ? ' (' + k.model_name + ')' : ''}`).join(', ')}
-                            </span>
-                        </div>` : ''}
-                    <div class="mobile-card-row">
                         <span class="mobile-card-label">註冊時間</span>
                         <span class="mobile-card-value">${formatDate(user.created_at)}</span>
                     </div>
@@ -1000,23 +987,12 @@ async function loadUsers(page = 1) {
                     '<span class="badge badge-success">已訂閱</span>' : 
                     '<span class="badge badge-danger">未訂閱</span>';
                 
-                // LLM Key 綁定狀態
-                const hasLlmKey = user.has_llm_key || (user.llm_keys && user.llm_keys.length > 0);
-                const llmKeyStatus = hasLlmKey ? 
-                    '<span class="badge badge-info">🔑 已綁定</span>' : 
-                    '<span class="badge" style="background: #e5e7eb; color: #6b7280;">未綁定</span>';
-                const llmKeyInfo = hasLlmKey && user.llm_keys ? 
-                    user.llm_keys.map(k => `${k.provider === 'gemini' ? 'Gemini' : k.provider === 'openai' ? 'OpenAI' : k.provider}${k.model_name ? ' (' + k.model_name + ')' : ''}`).join(', ') : 
-                    '-';
-                
                 return `
                 <tr>
                     <td>${user.user_id.substring(0, 12)}...</td>
                     <td>${user.email}</td>
                     <td>${user.name || '-'}</td>
                     <td id="subscribe-status-${user.user_id}">${subscribeStatus}</td>
-                    <td>${llmKeyStatus}</td>
-                    <td style="font-size: 0.85em; color: #64748b;" title="${llmKeyInfo}">${llmKeyInfo.length > 30 ? llmKeyInfo.substring(0, 30) + '...' : llmKeyInfo}</td>
                     <td>${formatDate(user.created_at)}</td>
                     <td>${user.conversation_count || 0}</td>
                     <td>${user.script_count || 0}</td>
