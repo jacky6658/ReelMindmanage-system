@@ -658,18 +658,18 @@ function loadSectionData(section) {
         // case 'generations': // 已隱藏
         //     loadGenerations();
         //     break;
-            case 'analytics':
-                loadAnalytics();
-                break;
+        case 'analytics':
+            loadAnalytics();
+            break;
             case 'usage-statistics':
                 loadUsageStatistics();
                 break;
             case 'llm-keys':
                 loadLlmKeysStatus();
                 break;
-            case 'admin-settings':
-                loadAdminSettings();
-                break;
+        case 'admin-settings':
+            loadAdminSettings();
+            break;
     }
 }
 
@@ -909,9 +909,13 @@ function formatDateTime(dateString) {
 }
 
 // ===== 用戶管理 =====
-async function loadUsers() {
+let currentUsersPage = 1;
+const usersPageSize = 20;
+
+async function loadUsers(page = 1) {
     try {
-        const response = await adminFetch(`${API_BASE_URL}/admin/users`);
+        currentUsersPage = page;
+        const response = await adminFetch(`${API_BASE_URL}/admin/users?page=${page}&page_size=${usersPageSize}`);
         const data = await response.json();
         
         // 檢測是否為手機版
@@ -951,6 +955,19 @@ async function loadUsers() {
                         <span class="mobile-card-value" id="mobile-subscribe-status-${user.user_id}">${subscribeStatus}</span>
                     </div>
                     <div class="mobile-card-row">
+                        <span class="mobile-card-label">LLM Key 綁定</span>
+                        <span class="mobile-card-value">${(user.has_llm_key || (user.llm_keys && user.llm_keys.length > 0)) ? 
+                            '<span class="badge badge-info">🔑 已綁定</span>' : 
+                            '<span class="badge" style="background: #e5e7eb; color: #6b7280;">未綁定</span>'}</span>
+                    </div>
+                    ${(user.has_llm_key || (user.llm_keys && user.llm_keys.length > 0)) && user.llm_keys ? 
+                        `<div class="mobile-card-row">
+                            <span class="mobile-card-label">綁定資訊</span>
+                            <span class="mobile-card-value" style="font-size: 0.85em; color: #64748b;">
+                                ${user.llm_keys.map(k => `${k.provider === 'gemini' ? 'Gemini' : k.provider === 'openai' ? 'OpenAI' : k.provider}${k.model_name ? ' (' + k.model_name + ')' : ''}`).join(', ')}
+                            </span>
+                        </div>` : ''}
+                    <div class="mobile-card-row">
                         <span class="mobile-card-label">註冊時間</span>
                         <span class="mobile-card-value">${formatDate(user.created_at)}</span>
                     </div>
@@ -983,12 +1000,23 @@ async function loadUsers() {
                     '<span class="badge badge-success">已訂閱</span>' : 
                     '<span class="badge badge-danger">未訂閱</span>';
                 
+                // LLM Key 綁定狀態
+                const hasLlmKey = user.has_llm_key || (user.llm_keys && user.llm_keys.length > 0);
+                const llmKeyStatus = hasLlmKey ? 
+                    '<span class="badge badge-info">🔑 已綁定</span>' : 
+                    '<span class="badge" style="background: #e5e7eb; color: #6b7280;">未綁定</span>';
+                const llmKeyInfo = hasLlmKey && user.llm_keys ? 
+                    user.llm_keys.map(k => `${k.provider === 'gemini' ? 'Gemini' : k.provider === 'openai' ? 'OpenAI' : k.provider}${k.model_name ? ' (' + k.model_name + ')' : ''}`).join(', ') : 
+                    '-';
+                
                 return `
                 <tr>
                     <td>${user.user_id.substring(0, 12)}...</td>
                     <td>${user.email}</td>
                     <td>${user.name || '-'}</td>
                     <td id="subscribe-status-${user.user_id}">${subscribeStatus}</td>
+                    <td>${llmKeyStatus}</td>
+                    <td style="font-size: 0.85em; color: #64748b;" title="${llmKeyInfo}">${llmKeyInfo.length > 30 ? llmKeyInfo.substring(0, 30) + '...' : llmKeyInfo}</td>
                     <td>${formatDate(user.created_at)}</td>
                     <td>${user.conversation_count || 0}</td>
                     <td>${user.script_count || 0}</td>
@@ -1007,16 +1035,69 @@ async function loadUsers() {
             }).join('');
         }
         
-        // 添加匯出按鈕
+        // 添加分頁控制
         const actionsDiv = document.querySelector('#users .section-actions');
+        if (!actionsDiv) {
+            const sectionHeader = document.querySelector('#users .section-header');
+            if (sectionHeader) {
+                const newActionsDiv = document.createElement('div');
+                newActionsDiv.className = 'section-actions';
+                sectionHeader.appendChild(newActionsDiv);
+                actionsDiv = newActionsDiv;
+            }
+        }
+        
         if (actionsDiv) {
+            // 移除現有的分頁控制
+            const existingPagination = actionsDiv.querySelector('.pagination-controls');
+            if (existingPagination) {
+                existingPagination.remove();
+            }
+            
+            // 添加分頁控制（如果有分頁資訊）
+            if (data.total_pages && data.total_pages > 1) {
+                const paginationDiv = document.createElement('div');
+                paginationDiv.className = 'pagination-controls';
+                paginationDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-right: 12px;';
+                
+                const pageInfo = document.createElement('span');
+                pageInfo.style.cssText = 'color: #64748b; font-size: 0.9em; margin-right: 8px;';
+                pageInfo.textContent = `第 ${data.current_page} / ${data.total_pages} 頁（共 ${data.total_users} 筆）`;
+                
+                const prevBtn = document.createElement('button');
+                prevBtn.className = 'btn btn-secondary';
+                prevBtn.innerHTML = '← 上一頁';
+                prevBtn.disabled = data.current_page <= 1;
+                prevBtn.onclick = () => {
+                    if (data.current_page > 1) {
+                        loadUsers(data.current_page - 1);
+                    }
+                };
+                
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'btn btn-secondary';
+                nextBtn.innerHTML = '下一頁 →';
+                nextBtn.disabled = data.current_page >= data.total_pages;
+                nextBtn.onclick = () => {
+                    if (data.current_page < data.total_pages) {
+                        loadUsers(data.current_page + 1);
+                    }
+                };
+                
+                paginationDiv.appendChild(pageInfo);
+                paginationDiv.appendChild(prevBtn);
+                paginationDiv.appendChild(nextBtn);
+                actionsDiv.insertBefore(paginationDiv, actionsDiv.firstChild);
+            }
+            
+            // 添加匯出按鈕
             let exportBtn = actionsDiv.querySelector('.btn-export');
             if (!exportBtn) {
                 exportBtn = document.createElement('button');
                 exportBtn.className = 'btn btn-secondary btn-export';
                 exportBtn.innerHTML = '<i class="icon">📥</i> 匯出 CSV';
                 exportBtn.onclick = () => exportCSV('users');
-                actionsDiv.insertBefore(exportBtn, actionsDiv.firstChild);
+                actionsDiv.appendChild(exportBtn);
             }
         }
     } catch (error) {
@@ -1089,13 +1170,15 @@ async function viewUser(userId) {
             
             content += `<div style="margin-top: 16px; padding: 12px; background: #f0f9ff; border-radius: 8px;">`;
             content += `<h4 style="margin-bottom: 8px;">🔑 授權資訊</h4>`;
-            // 只顯示 yearly 和 lifetime，過濾 monthly 和 personal
+            // 只顯示 yearly、two_year 和 lifetime，過濾 monthly 和 personal
             let tierDisplay = '未訂閱';
             if (licenseData && licenseData.tier && licenseData.tier !== 'none') {
                 if (licenseData.tier === 'lifetime') {
                     tierDisplay = '永久使用';
+                } else if (licenseData.tier === 'two_year') {
+                    tierDisplay = 'Creator Pro 雙年';
                 } else if (licenseData.tier === 'yearly') {
-                    tierDisplay = '年費';
+                    tierDisplay = 'Script Lite 入門';
                 } else if (licenseData.tier === 'monthly' || licenseData.tier === 'personal') {
                     tierDisplay = '需要升級（舊方案）';
                 }
@@ -1177,7 +1260,7 @@ async function viewUser(userId) {
                 
                 content += `<tr>`;
                 content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.order_id || order.id}</td>`;
-                content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.plan_type === 'lifetime' ? '永久使用' : order.plan_type === 'yearly' ? '年費' : (order.plan_type === 'monthly' || order.plan_type === 'personal') ? '舊方案（需升級）' : order.plan_type || '-'}</td>`;
+                content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.plan_type === 'two_year' ? 'Creator Pro 雙年' : order.plan_type === 'yearly' ? 'Script Lite 入門' : order.plan_type === 'lifetime' ? '永久使用' : (order.plan_type === 'monthly' || order.plan_type === 'personal') ? '舊方案（需升級）' : order.plan_type || '-'}</td>`;
                 content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">NT$${order.amount?.toLocaleString() || 0}</td>`;
                 content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${paymentMethodDisplay}</td>`;
                 content += `<td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${order.payment_status === 'paid' ? '✅ 已付款' : '⏳ 待付款'}</td>`;
@@ -3851,7 +3934,7 @@ async function loadOrders() {
                         </div>
                         <div class="mobile-card-row">
                             <span class="mobile-card-label">方案</span>
-                            <span class="mobile-card-value">${order.plan_type === 'lifetime' ? '永久使用' : order.plan_type === 'yearly' ? '年費' : (order.plan_type === 'monthly' || order.plan_type === 'personal') ? '舊方案（需升級）' : order.plan_type || '-'}</span>
+                            <span class="mobile-card-value">${order.plan_type === 'two_year' ? 'Creator Pro 雙年' : order.plan_type === 'yearly' ? 'Script Lite 入門' : order.plan_type === 'lifetime' ? '永久使用' : (order.plan_type === 'monthly' || order.plan_type === 'personal') ? '舊方案（需升級）' : order.plan_type || '-'}</span>
                         </div>
                         <div class="mobile-card-row">
                             <span class="mobile-card-label">金額</span>
@@ -3949,7 +4032,7 @@ async function loadOrders() {
                             <span style="font-size: 0.85rem; color: #64748b;">${escapeHtml(order.user_email || '')}</span>
                         </div>
                     </td>
-                    <td>${order.plan_type === 'lifetime' ? '永久使用' : order.plan_type === 'yearly' ? '年費' : (order.plan_type === 'monthly' || order.plan_type === 'personal') ? '舊方案（需升級）' : order.plan_type || '-'}</td>
+                    <td>${order.plan_type === 'two_year' ? 'Creator Pro 雙年' : order.plan_type === 'yearly' ? 'Script Lite 入門' : order.plan_type === 'lifetime' ? '永久使用' : (order.plan_type === 'monthly' || order.plan_type === 'personal') ? '舊方案（需升級）' : order.plan_type || '-'}</td>
                     <td>NT$${order.amount?.toLocaleString() || 0}</td>
                     <td>${escapeHtml(order.payment_method || '-')}</td>
                     <td>
@@ -4150,7 +4233,7 @@ async function viewCleanupLogDetail(logId) {
                     <tr>
                         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(order.order_id || '-')}</td>
                         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml((order.user_id || '').substring(0, 16))}...</td>
-                        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(order.plan_type === 'lifetime' ? '永久使用' : order.plan_type === 'yearly' ? '年費' : (order.plan_type === 'monthly' || order.plan_type === 'personal') ? '舊方案（需升級）' : order.plan_type || '-')}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(order.plan_type === 'two_year' ? 'Creator Pro 雙年' : order.plan_type === 'yearly' ? 'Script Lite 入門' : order.plan_type === 'lifetime' ? '永久使用' : (order.plan_type === 'monthly' || order.plan_type === 'personal') ? '舊方案（需升級）' : order.plan_type || '-')}</td>
                         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; text-align: right;">NT$${(order.amount || 0).toLocaleString()}</td>
                         <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${escapeHtml(formatDateTime(order.created_at))}</td>
                     </tr>
@@ -4293,7 +4376,7 @@ async function loadLicenseActivations() {
                         </div>
                         <div class="mobile-card-row">
                             <span class="mobile-card-label">方案</span>
-                            <span class="mobile-card-value">${activation.plan_type === 'lifetime' ? '永久使用' : activation.plan_type === 'yearly' ? '年費' : (activation.plan_type === 'monthly' || activation.plan_type === 'personal') ? '舊方案（需升級）' : activation.plan_type || '-'}</span>
+                            <span class="mobile-card-value">${activation.plan_type === 'two_year' ? 'Creator Pro 雙年' : activation.plan_type === 'yearly' ? 'Script Lite 入門' : activation.plan_type === 'lifetime' ? '永久使用' : (activation.plan_type === 'monthly' || activation.plan_type === 'personal') ? '舊方案（需升級）' : activation.plan_type || '-'}</span>
                         </div>
                         <div class="mobile-card-row">
                             <span class="mobile-card-label">金額</span>
@@ -4381,7 +4464,7 @@ async function loadLicenseActivations() {
                     <td>${activation.channel || '-'}</td>
                     <td>${activation.order_id || '-'}</td>
                     <td>${activation.email || '-'}</td>
-                    <td>${activation.plan_type === 'lifetime' ? '永久使用' : activation.plan_type === 'yearly' ? '年費' : (activation.plan_type === 'monthly' || activation.plan_type === 'personal') ? '舊方案（需升級）' : activation.plan_type || '-'}</td>
+                    <td>${activation.plan_type === 'two_year' ? 'Creator Pro 雙年' : activation.plan_type === 'yearly' ? 'Script Lite 入門' : activation.plan_type === 'lifetime' ? '永久使用' : (activation.plan_type === 'monthly' || activation.plan_type === 'personal') ? '舊方案（需升級）' : activation.plan_type || '-'}</td>
                     <td>NT$${activation.amount?.toLocaleString() || 0}</td>
                     <td>${statusBadge}</td>
                     <td>${formatDate(activation.link_expires_at)}</td>
