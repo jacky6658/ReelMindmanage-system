@@ -1012,7 +1012,7 @@ async function loadUsers(page = 1) {
         }
         
         // 添加分頁控制
-        const actionsDiv = document.querySelector('#users .section-actions');
+        let actionsDiv = document.querySelector('#users .section-actions');
         if (!actionsDiv) {
             const sectionHeader = document.querySelector('#users .section-header');
             if (sectionHeader) {
