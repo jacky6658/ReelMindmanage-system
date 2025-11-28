@@ -2849,21 +2849,28 @@ function showSubscriptionModal(userId) {
 
 function updateSubscriptionPeriod(period) {
     // 更新選中的樣式
+    const monthlyLabel = document.getElementById('subscription-monthly-label');
     const yearlyLabel = document.getElementById('subscription-yearly-label');
     const lifetimeLabel = document.getElementById('subscription-lifetime-label');
     
-    if (yearlyLabel && lifetimeLabel) {
-        if (period === 'yearly') {
-            yearlyLabel.style.borderColor = '#3b82f6';
-            yearlyLabel.style.backgroundColor = '#eff6ff';
-            lifetimeLabel.style.borderColor = '#e5e7eb';
-            lifetimeLabel.style.backgroundColor = 'transparent';
-        } else if (period === 'lifetime') {
-            yearlyLabel.style.borderColor = '#e5e7eb';
-            yearlyLabel.style.backgroundColor = 'transparent';
-            lifetimeLabel.style.borderColor = '#3b82f6';
-            lifetimeLabel.style.backgroundColor = '#eff6ff';
+    // 重置所有樣式
+    const labels = [monthlyLabel, yearlyLabel, lifetimeLabel];
+    labels.forEach(label => {
+        if (label) {
+            label.style.borderColor = '#e5e7eb';
+            label.style.backgroundColor = 'transparent';
         }
+    });
+    
+    // 設置選中樣式
+    let activeLabel;
+    if (period === 'monthly') activeLabel = monthlyLabel;
+    else if (period === 'yearly') activeLabel = yearlyLabel;
+    else if (period === 'lifetime') activeLabel = lifetimeLabel;
+    
+    if (activeLabel) {
+        activeLabel.style.borderColor = '#3b82f6';
+        activeLabel.style.backgroundColor = '#eff6ff';
     }
 }
 
@@ -2887,7 +2894,17 @@ async function confirmSubscription() {
     
     // 獲取選中的訂閱期限
     const selectedPeriod = document.querySelector('input[name="subscription-period"]:checked').value;
-    const subscriptionDays = selectedPeriod === 'yearly' ? 365 : (selectedPeriod === 'lifetime' ? 36500 : 365);
+    let subscriptionDays;
+    
+    if (selectedPeriod === 'monthly') {
+        subscriptionDays = 30;
+    } else if (selectedPeriod === 'yearly') {
+        subscriptionDays = 365;
+    } else if (selectedPeriod === 'lifetime') {
+        subscriptionDays = 36500;
+    } else {
+        subscriptionDays = 365; // 默認
+    }
     
     // 獲取備註
     const note = document.getElementById('subscription-note').value.trim();
@@ -2926,7 +2943,13 @@ async function executeSubscriptionToggle(userId, subscribe, subscriptionDays, no
         
         if (response.ok) {
             const result = await response.json();
-            const periodText = subscribe && subscriptionDays === 365 ? '年費' : subscribe && subscriptionDays >= 36500 ? '永久使用' : '';
+            let periodText = '';
+            if (subscribe) {
+                if (subscriptionDays === 30) periodText = '月費';
+                else if (subscriptionDays === 365) periodText = '年費';
+                else if (subscriptionDays >= 36500) periodText = '永久使用';
+                else periodText = `${subscriptionDays}天`;
+            }
             const message = subscribe ? `已啟用訂閱${periodText ? `（${periodText}）` : ''}` : '已取消訂閱';
             showToast(message, 'success');
             
