@@ -920,12 +920,14 @@ async function loadUsers(page = 1) {
         
         // 檢測是否為手機版
         const isMobile = window.innerWidth <= 768;
-        const tableContainer = document.querySelector('.table-container');
+        let tableContainer = document.querySelector('#users .table-container');
         
         if (isMobile) {
             // 手機版：卡片式佈局
             // 清空表格內容
-            tableContainer.innerHTML = '';
+            if (tableContainer) {
+                tableContainer.innerHTML = '';
+            }
             
             // 創建卡片容器
             const cardsContainer = document.createElement('div');
@@ -972,7 +974,9 @@ async function loadUsers(page = 1) {
             `;
             }).join('');
             
-            tableContainer.appendChild(cardsContainer);
+            if (tableContainer) {
+                tableContainer.appendChild(cardsContainer);
+            }
         } else {
             // 桌面版：表格佈局
             const tbody = document.getElementById('users-table-body');
@@ -2834,8 +2838,15 @@ async function toggleSubscribe(userId, subscribe) {
 
 function showSubscriptionModal(userId) {
     // 重置表單（預設為年費）
-    document.querySelector('input[name="subscription-period"][value="yearly"]').checked = true;
-    document.getElementById('subscription-note').value = '';
+    const yearlyRadio = document.querySelector('input[name="subscription-period"][value="yearly"]');
+    if (yearlyRadio) {
+        yearlyRadio.checked = true;
+    }
+    
+    const noteTextarea = document.getElementById('subscription-note');
+    if (noteTextarea) {
+        noteTextarea.value = '';
+    }
     
     // 初始化樣式
     setTimeout(() => {
@@ -2844,7 +2855,9 @@ function showSubscriptionModal(userId) {
     
     // 顯示彈窗
     const modal = document.getElementById('subscription-modal');
-    modal.classList.add('active');
+    if (modal) {
+        modal.classList.add('active');
+    }
 }
 
 function updateSubscriptionPeriod(period) {
