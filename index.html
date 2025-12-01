@@ -71,6 +71,10 @@
                     <span class="icon">💳</span>
                     <span>購買記錄</span>
                 </a>
+                <a href="#" class="nav-item" data-section="referrals">
+                    <span class="icon">🎁</span>
+                    <span>推薦＆獎勵</span>
+                </a>
                 <a href="#" class="nav-item" data-section="order-cleanup-logs">
                     <span class="icon">🧹</span>
                     <span>訂單清理日誌</span>
@@ -404,6 +408,76 @@
                 </div>
                 <div class="stats-grid" style="margin-bottom: 20px;"></div>
                 <div class="table-container"></div>
+            </div>
+
+            <!-- 推薦＆獎勵監控頁面 -->
+            <div class="section" id="referrals">
+                <div class="section-header">
+                    <h2>推薦＆獎勵監控</h2>
+                    <button class="btn-refresh" onclick="loadReferrals()">🔄 重新整理</button>
+                </div>
+                
+                <!-- 統計卡片 -->
+                <div class="stats-grid" style="margin-bottom: 24px;">
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-info">
+                            <h3 id="referral-total-referrers">-</h3>
+                            <p>總推薦人數</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎯</div>
+                        <div class="stat-info">
+                            <h3 id="referral-total-referred">-</h3>
+                            <p>總被推薦人數</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-info">
+                            <h3 id="referral-total-records">-</h3>
+                            <p>總推薦記錄數</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🎁</div>
+                        <div class="stat-info">
+                            <h3 id="referral-total-rewards">-</h3>
+                            <p>已發放獎勵數</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⏰</div>
+                        <div class="stat-info">
+                            <h3 id="referral-total-days">-</h3>
+                            <p>總獎勵天數</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 詳細列表表格 -->
+                <div class="table-container">
+                    <table class="data-table" id="referrals-table">
+                        <thead>
+                            <tr>
+                                <th>邀請人</th>
+                                <th>邀請人Email</th>
+                                <th>被邀請人</th>
+                                <th>被邀請人Email</th>
+                                <th>被邀請人ID</th>
+                                <th>推薦碼</th>
+                                <th>註冊時間</th>
+                                <th>付款狀態</th>
+                                <th>付款金額</th>
+                                <th>最後付款時間</th>
+                                <th>獎勵狀態</th>
+                                <th>獎勵詳情</th>
+                            </tr>
+                        </thead>
+                        <tbody id="referrals-table-body"></tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- 訂單清理日誌頁面 -->

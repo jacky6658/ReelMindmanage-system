@@ -606,6 +606,7 @@ function switchSection(section) {
         'scripts': '腳本管理',
         'ip-planning': 'IP人設規劃',
         'orders': '購買記錄',
+        'referrals': '推薦＆獎勵',
         'order-cleanup-logs': '訂單清理日誌',
         // 'generations': '生成記錄', // 已隱藏
         'analytics': '數據分析',
@@ -648,6 +649,9 @@ function loadSectionData(section) {
             break;
         case 'orders':
             loadOrders();
+            break;
+        case 'referrals':
+            loadReferrals();
             break;
         case 'order-cleanup-logs':
             loadOrderCleanupLogs();
@@ -3884,6 +3888,92 @@ async function importData() {
 }
 
 // ===== 購買記錄 =====
+// ===== 推薦＆獎勵監控 =====
+async function loadReferrals() {
+    try {
+        const response = await adminFetch(`${API_BASE_URL}/admin/referrals`);
+        if (!response.ok) {
+            throw new Error('獲取推薦碼數據失敗');
+        }
+        
+        const data = await response.json();
+        
+        // 更新統計卡片
+        document.getElementById('referral-total-referrers').textContent = data.stats.total_referrers || 0;
+        document.getElementById('referral-total-referred').textContent = data.stats.total_referred || 0;
+        document.getElementById('referral-total-records').textContent = data.stats.total_records || 0;
+        document.getElementById('referral-total-rewards').textContent = data.stats.total_rewards_granted || 0;
+        document.getElementById('referral-total-days').textContent = data.stats.total_reward_days || 0;
+        
+        // 更新表格
+        const tbody = document.getElementById('referrals-table-body');
+        if (!tbody) {
+            console.error('找不到 referrals-table-body 元素');
+            return;
+        }
+        
+        if (data.records && data.records.length > 0) {
+            tbody.innerHTML = data.records.map(record => {
+                // 付款狀態顯示
+                const paymentStatus = record.has_paid_order 
+                    ? '<span class="badge badge-success">已付款</span>' 
+                    : '<span class="badge badge-danger">未付款</span>';
+                
+                // 付款金額顯示
+                const paymentAmount = record.has_paid_order 
+                    ? `NT$ ${record.total_paid_amount.toLocaleString()}` 
+                    : '-';
+                
+                // 最後付款時間
+                const lastPaidDate = record.last_paid_date 
+                    ? formatDate(record.last_paid_date) 
+                    : '-';
+                
+                // 獎勵狀態顯示（已發放要標記）
+                let rewardStatus = '';
+                if (record.reward_granted) {
+                    rewardStatus = '<span class="badge badge-success">✓ 已發放</span>';
+                } else if (record.has_paid_order) {
+                    rewardStatus = '<span class="badge badge-warning">待發放</span>';
+                } else {
+                    rewardStatus = '<span class="badge badge-secondary">未達成</span>';
+                }
+                
+                // 獎勵詳情
+                const rewardDetails = record.reward_details || '-';
+                
+                return `
+                <tr>
+                    <td>${record.referrer_name}</td>
+                    <td>${record.referrer_email}</td>
+                    <td>${record.referred_name}</td>
+                    <td>${record.referred_email}</td>
+                    <td><code style="font-size: 0.85em;">${record.referred_user_id.substring(0, 16)}...</code></td>
+                    <td><code style="font-size: 0.85em;">${record.referral_code}</code></td>
+                    <td>${formatDate(record.referral_date)}</td>
+                    <td>${paymentStatus}</td>
+                    <td>${paymentAmount}</td>
+                    <td>${lastPaidDate}</td>
+                    <td>${rewardStatus}</td>
+                    <td>${rewardDetails}</td>
+                </tr>
+            `;
+            }).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 40px; color: #6b7280;">暫無推薦記錄</td></tr>';
+        }
+    } catch (error) {
+        console.error('載入推薦碼數據失敗:', error);
+        showToast('載入推薦碼數據失敗', 'error');
+        
+        // 顯示錯誤狀態
+        const tbody = document.getElementById('referrals-table-body');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 40px; color: #ef4444;">載入失敗，請重新整理</td></tr>';
+        }
+    }
+}
+
 async function loadOrders() {
     try {
         const response = await adminFetch(`${API_BASE_URL}/admin/orders`);
