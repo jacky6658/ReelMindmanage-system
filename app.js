@@ -4618,3 +4618,131 @@ async function deleteLicenseActivation(activationId) {
         showToast('刪除授權記錄失敗', 'error');
     }
 }
+
+// ===== 右鍵選單功能 =====
+let contextMenu = null;
+let selectedCellText = '';
+
+// 初始化右鍵選單
+function initContextMenu() {
+    contextMenu = document.getElementById('context-menu');
+    if (!contextMenu) return;
+    
+    // 為所有表格單元格添加右鍵事件
+    document.addEventListener('contextmenu', function(e) {
+        // 檢查是否點擊在表格單元格上
+        const td = e.target.closest('td');
+        if (td && td.closest('.data-table')) {
+            e.preventDefault();
+            
+            // 獲取單元格文字（去除 HTML 標籤）
+            selectedCellText = td.innerText || td.textContent || '';
+            
+            // 顯示右鍵選單
+            showContextMenu(e.pageX, e.pageY);
+        } else {
+            // 點擊其他地方時隱藏選單
+            hideContextMenu();
+        }
+    });
+    
+    // 點擊其他地方時隱藏選單
+    document.addEventListener('click', function(e) {
+        if (contextMenu && !contextMenu.contains(e.target)) {
+            hideContextMenu();
+        }
+    });
+    
+    // ESC 鍵隱藏選單
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            hideContextMenu();
+        }
+    });
+}
+
+// 顯示右鍵選單
+function showContextMenu(x, y) {
+    if (!contextMenu) return;
+    
+    contextMenu.style.display = 'block';
+    contextMenu.style.left = x + 'px';
+    contextMenu.style.top = y + 'px';
+    
+    // 確保選單不會超出視窗
+    setTimeout(() => {
+        const rect = contextMenu.getBoundingClientRect();
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        
+        if (x + rect.width > windowWidth) {
+            contextMenu.style.left = (x - rect.width) + 'px';
+        }
+        
+        if (y + rect.height > windowHeight) {
+            contextMenu.style.top = (y - rect.height) + 'px';
+        }
+    }, 0);
+}
+
+// 隱藏右鍵選單
+function hideContextMenu() {
+    if (contextMenu) {
+        contextMenu.style.display = 'none';
+    }
+}
+
+// 複製單元格文字
+function copyCellText() {
+    if (!selectedCellText) return;
+    
+    // 使用 Clipboard API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(selectedCellText).then(() => {
+            showToast('已複製到剪貼簿', 'success');
+            hideContextMenu();
+        }).catch(err => {
+            console.error('複製失敗:', err);
+            // 降級方案：使用傳統方法
+            fallbackCopyText(selectedCellText);
+        });
+    } else {
+        // 降級方案：使用傳統方法
+        fallbackCopyText(selectedCellText);
+    }
+}
+
+// 降級複製方案（兼容舊瀏覽器）
+function fallbackCopyText(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showToast('已複製到剪貼簿', 'success');
+        } else {
+            showToast('複製失敗，請手動選擇文字複製', 'error');
+        }
+    } catch (err) {
+        console.error('複製失敗:', err);
+        showToast('複製失敗，請手動選擇文字複製', 'error');
+    } finally {
+        document.body.removeChild(textArea);
+        hideContextMenu();
+    }
+}
+
+// 在頁面載入完成後初始化右鍵選單
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initContextMenu);
+} else {
+    // 如果 DOM 已經載入完成，直接初始化
+    setTimeout(initContextMenu, 100);
+}

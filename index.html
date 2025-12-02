@@ -28,6 +28,55 @@
         -ms-user-select: text;
         user-select: text;
       }
+      
+      /* 允許表格單元格可選擇文字 */
+      .data-table td, .data-table th {
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        user-select: text;
+        cursor: text;
+      }
+      
+      /* 右鍵選單樣式 */
+      .context-menu {
+        position: fixed;
+        background: white;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        padding: 4px 0;
+        z-index: 10000;
+        min-width: 150px;
+        display: none;
+      }
+      
+      .context-menu-item {
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+        color: #374151;
+        transition: background-color 0.15s;
+      }
+      
+      .context-menu-item:hover {
+        background-color: #f3f4f6;
+      }
+      
+      .context-menu-item:active {
+        background-color: #e5e7eb;
+      }
+      
+      .context-menu-item.copy {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      
+      .context-menu-item.copy::before {
+        content: "📋";
+        font-size: 16px;
+      }
     </style>
   </head>
 <body>
@@ -884,6 +933,11 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- 右鍵選單 -->
+    <div class="context-menu" id="context-menu">
+        <div class="context-menu-item copy" onclick="copyCellText()">複製</div>
     </div>
 
     <!-- 載入 Chart.js -->
