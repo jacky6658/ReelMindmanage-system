@@ -756,10 +756,15 @@ function switchTab(tabsContainer, tabId) {
     tabPanels.forEach(panel => {
         if (panel.id === `tab-${tabId}`) {
             panel.classList.add('active');
-            // 載入該標籤頁的數據
-            loadTabData(tabId);
+            // 顯示面板（確保可見）
+            panel.style.display = 'block';
+            // 載入該標籤頁的數據（延遲一下確保DOM已更新且可見）
+            setTimeout(() => {
+                loadTabData(tabId);
+            }, 100);
         } else {
             panel.classList.remove('active');
+            panel.style.display = 'none';
         }
     });
     
@@ -976,20 +981,56 @@ function loadSectionData(section) {
             loadDashboard();
             break;
         case 'users-center':
-            // 用戶管理中心：載入第一個標籤頁的數據
-            loadUsers();
+            // 用戶管理中心：確保第一個標籤頁是 active 的，然後載入數據
+            setTimeout(() => {
+                const tabsContainer = document.querySelector('#users-center .tabs-container');
+                if (tabsContainer) {
+                    const firstTab = tabsContainer.querySelector('.tab-btn[data-tab="users-list"]');
+                    if (firstTab && !firstTab.classList.contains('active')) {
+                        switchTab(tabsContainer, 'users-list');
+                    } else {
+                        loadUsers();
+                    }
+                } else {
+                    loadUsers();
+                }
+            }, 100);
             break;
         case 'content-center':
             // 內容管理中心：載入第一個標籤頁的數據
             loadScripts();
             break;
         case 'business-center':
-            // 商業管理中心：載入第一個標籤頁的數據
-            loadOrders();
+            // 商業管理中心：確保第一個標籤頁是 active 的，然後載入數據
+            setTimeout(() => {
+                const tabsContainer = document.querySelector('#business-center .tabs-container');
+                if (tabsContainer) {
+                    const firstTab = tabsContainer.querySelector('.tab-btn[data-tab="orders-list"]');
+                    if (firstTab && !firstTab.classList.contains('active')) {
+                        switchTab(tabsContainer, 'orders-list');
+                    } else {
+                        loadOrders();
+                    }
+                } else {
+                    loadOrders();
+                }
+            }, 100);
             break;
         case 'system-center':
-            // 系統維護中心：載入第一個標籤頁的數據
-            loadOrderCleanupLogs();
+            // 系統維護中心：確保第一個標籤頁是 active 的，然後載入數據
+            setTimeout(() => {
+                const tabsContainer = document.querySelector('#system-center .tabs-container');
+                if (tabsContainer) {
+                    const firstTab = tabsContainer.querySelector('.tab-btn[data-tab="cleanup-logs"]');
+                    if (firstTab && !firstTab.classList.contains('active')) {
+                        switchTab(tabsContainer, 'cleanup-logs');
+                    } else {
+                        loadOrderCleanupLogs();
+                    }
+                } else {
+                    loadOrderCleanupLogs();
+                }
+            }, 100);
             break;
         case 'admin-settings':
             loadAdminSettings();
@@ -1118,14 +1159,20 @@ async function loadDashboardCore() {
         
         if (dashboardUsersEl) {
             dashboardUsersEl.textContent = stats.total_users || 0;
+        } else {
+            console.warn('找不到 dashboard-total-users 元素，可能頁面結構已改變');
         }
         
         if (dashboardConversationsEl) {
             dashboardConversationsEl.textContent = stats.total_conversations || 0;
+        } else {
+            console.warn('找不到 dashboard-total-conversations 元素');
         }
         
         if (dashboardScriptsEl) {
             dashboardScriptsEl.textContent = stats.total_scripts || 0;
+        } else {
+            console.warn('找不到 dashboard-total-scripts 元素');
         }
         
         // 營收計算延遲載入（非關鍵數據）
@@ -1953,21 +2000,26 @@ async function loadModes() {
         const mode2 = data.mode_stats.mode2_ai_consultant || { count: 0, avg_turns: 0 };
         const mode3 = data.mode_stats.mode3_quick_generate || { count: 0, completion_rate: 0 };
         
+        // 優先查找系統維護中心的模式分析標籤頁中的元素（如果存在）
+        const modesAnalysisPanel = document.getElementById('tab-modes-analysis');
+        const modesSection = document.getElementById('modes');
+        
         // Mode1: IP人設規劃（顯示使用次數和生成的Profile數）
-        const mode1CountEl = document.getElementById('mode1-count');
-        const mode1CompletionEl = document.getElementById('mode1-completion');
+        // 優先使用系統維護中心的專用ID，如果不存在則使用舊的ID（向後兼容）
+        let mode1CountEl = document.getElementById('modes-analysis-mode1-count') || document.getElementById('mode1-count');
+        let mode1CompletionEl = document.getElementById('modes-analysis-mode1-completion') || document.getElementById('mode1-completion');
         if (mode1CountEl) mode1CountEl.textContent = mode1.count || 0;
         if (mode1CompletionEl) mode1CompletionEl.textContent = mode1.profiles_generated || 0;
         
         // Mode2: AI顧問（顯示使用次數和平均對話輪數）
-        const mode2CountEl = document.getElementById('mode2-count');
-        const mode2AvgEl = document.getElementById('mode2-avg');
+        let mode2CountEl = document.getElementById('modes-analysis-mode2-count') || document.getElementById('mode2-count');
+        let mode2AvgEl = document.getElementById('modes-analysis-mode2-avg') || document.getElementById('mode2-avg');
         if (mode2CountEl) mode2CountEl.textContent = mode2.count || 0;
         if (mode2AvgEl) mode2AvgEl.textContent = mode2.avg_turns ? `${mode2.avg_turns}` : '0';
         
         // Mode3: 一鍵生成（顯示使用次數和完成率）
-        const mode3CountEl = document.getElementById('mode3-count');
-        const mode3ProfileEl = document.getElementById('mode3-profile');
+        let mode3CountEl = document.getElementById('modes-analysis-mode3-count') || document.getElementById('mode3-count');
+        let mode3ProfileEl = document.getElementById('modes-analysis-mode3-profile') || document.getElementById('mode3-profile');
         if (mode3CountEl) mode3CountEl.textContent = mode3.count || 0;
         if (mode3ProfileEl) mode3ProfileEl.textContent = mode3.completion_rate ? `${mode3.completion_rate}%` : '0%';
         
@@ -1977,9 +2029,14 @@ async function loadModes() {
         const mode2Time = timeDist.mode2 || {};
         const mode3Time = timeDist.mode3 || {};
         
-        // 載入模式使用時間分布圖
+        // 載入模式使用時間分布圖（優先使用系統維護中心的專用ID，如果不存在則使用舊的ID）
         if (charts.modeTime) charts.modeTime.destroy();
-        const modeTimeCtx = document.getElementById('mode-time-chart');
+        let modeTimeCtx = document.getElementById('modes-analysis-mode-time-chart') || document.getElementById('mode-time-chart');
+        
+        if (!modeTimeCtx) {
+            console.warn('找不到模式時間分布圖表元素');
+            return;
+        }
         charts.modeTime = new Chart(modeTimeCtx, {
             type: 'bar',
             data: {
@@ -2869,10 +2926,27 @@ async function loadScripts() {
     try {
         // 檢測是否為手機版
         const isMobile = window.innerWidth <= 768;
-        const tableContainer = await waitFor('#scripts .table-container', 8000).catch(() => null);
+        // 更新選擇器以適配新的標籤頁結構 - 直接查找，不等待（元素應該已存在）
+        let tableContainer = document.querySelector('#tab-scripts-list .table-container') || 
+                             document.querySelector('#scripts .table-container');
+        
         if (!tableContainer) {
-            console.warn('[scripts] container missing');
-            return;
+            console.warn('[scripts] container missing - 嘗試查找標籤頁容器');
+            // 嘗試直接查找標籤頁內容
+            const tabPanel = document.getElementById('tab-scripts-list');
+            if (tabPanel) {
+                // 直接查找，不等待（元素應該已存在）
+                let container = tabPanel.querySelector('.table-container');
+                if (!container) {
+                    console.error('[scripts] 標籤頁中找不到 .table-container，檢查 HTML 結構');
+                    // 不創建容器，因為HTML結構應該已經有了
+                    return;
+                }
+                tableContainer = container;
+            } else {
+                console.error('[scripts] 找不到標籤頁面板 tab-scripts-list');
+                return;
+            }
         }
         
         // 直接獲取所有腳本
@@ -2885,8 +2959,10 @@ async function loadScripts() {
             if (isMobile) {
                 tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">暫無腳本記錄</div>';
             } else {
-                document.getElementById('scripts-table-body').innerHTML = 
-                    '<tr><td colspan="7" style="text-align: center; padding: 2rem;">暫無腳本記錄</td></tr>';
+                const tbody = document.getElementById('scripts-table-body');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 2rem;">暫無腳本記錄</td></tr>';
+                }
             }
             return;
         }
@@ -2925,8 +3001,21 @@ async function loadScripts() {
             tableContainer.appendChild(cardsContainer);
         } else {
             // 桌面版：表格佈局
-            const tbody = await waitFor('#scripts-table-body', 8000).catch(() => null);
-            if (!tbody) return;
+            // 直接使用 getElementById，因為元素應該已經存在
+            let tbody = document.getElementById('scripts-table-body');
+            if (!tbody) {
+                // 如果找不到，等待一下再試（標籤頁可能需要時間顯示）
+                await new Promise(resolve => setTimeout(resolve, 100));
+                tbody = document.getElementById('scripts-table-body');
+            }
+            
+            if (!tbody) {
+                console.error('[scripts] 無法找到 scripts-table-body 元素');
+                if (tableContainer) {
+                    tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem; color: #ef4444;">無法載入表格數據，請重新整理頁面</div>';
+                }
+                return;
+            }
             setHTML(tbody, allScripts.map((script, index) => `
                 <tr>
                     <td>${script.id}</td>
@@ -2946,8 +3035,9 @@ async function loadScripts() {
         // 保存腳本數據供查看功能使用
         window.allScripts = allScripts;
         
-        // 添加匯出按鈕
-        const actionsDiv = document.querySelector('#scripts .section-actions');
+        // 添加匯出按鈕（更新選擇器以適配新的標籤頁結構）
+        const actionsDiv = document.querySelector('#content-center .center-actions') || 
+                          document.querySelector('#scripts .section-actions');
         if (actionsDiv) {
             let exportBtn = actionsDiv.querySelector('.btn-export');
             if (!exportBtn) {
@@ -2969,10 +3059,27 @@ async function loadScripts() {
 async function loadIpPlanningResults() {
     try {
         const isMobile = window.innerWidth <= 768;
-        const tableContainer = await waitFor('#ip-planning .table-container', 8000).catch(() => null);
+        // 更新選擇器以適配新的標籤頁結構 - 直接查找，不等待（元素應該已存在）
+        let tableContainer = document.querySelector('#tab-ip-planning-list .table-container') || 
+                             document.querySelector('#ip-planning .table-container');
+        
         if (!tableContainer) {
-            console.warn('[ip-planning] container missing');
-            return;
+            console.warn('[ip-planning] container missing - 嘗試查找標籤頁容器');
+            // 嘗試直接查找標籤頁內容
+            const tabPanel = document.getElementById('tab-ip-planning-list');
+            if (tabPanel) {
+                // 直接查找，不等待（元素應該已存在）
+                let container = tabPanel.querySelector('.table-container');
+                if (!container) {
+                    console.error('[ip-planning] 標籤頁中找不到 .table-container，檢查 HTML 結構');
+                    // 不創建容器，因為HTML結構應該已經有了
+                    return;
+                }
+                tableContainer = container;
+            } else {
+                console.error('[ip-planning] 找不到標籤頁面板 tab-ip-planning-list');
+                return;
+            }
         }
         
         // 獲取篩選條件
@@ -3063,8 +3170,21 @@ async function loadIpPlanningResults() {
             tableContainer.appendChild(cardsContainer);
         } else {
             // 桌面版：按用戶分組的可展開視窗
-            const tbody = await waitFor('#ip-planning-table-body', 8000).catch(() => null);
-            if (!tbody) return;
+            // 直接使用 getElementById，因為元素應該已經存在
+            let tbody = document.getElementById('ip-planning-table-body');
+            if (!tbody) {
+                // 如果找不到，等待一下再試（標籤頁可能需要時間顯示）
+                await new Promise(resolve => setTimeout(resolve, 100));
+                tbody = document.getElementById('ip-planning-table-body');
+            }
+            
+            if (!tbody) {
+                console.error('[ip-planning] 無法找到 ip-planning-table-body 元素');
+                if (tableContainer) {
+                    tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem; color: #ef4444;">無法載入表格數據，請重新整理頁面</div>';
+                }
+                return;
+            }
             
             setHTML(tbody, userList.map((userGroup, groupIndex) => {
                 const userResults = userGroup.results;
@@ -4596,10 +4716,30 @@ async function loadOrders() {
         
         // 檢測是否為手機版
         const isMobile = window.innerWidth <= 768;
-        const tableContainer = await waitFor('#orders .table-container', 8000).catch(() => null);
+        // 更新選擇器以適配新的標籤頁結構
+        let tableContainer = document.querySelector('#tab-orders-list .table-container') || 
+                             document.querySelector('#orders .table-container');
+        
+        if (!tableContainer) {
+            // 等待元素出現（標籤頁可能需要時間顯示）
+            tableContainer = await waitFor('#tab-orders-list .table-container, #orders .table-container', 3000).catch(() => null);
+        }
+        
         if (!tableContainer) {
             console.error('找不到訂單表格容器');
-            return;
+            // 嘗試直接查找標籤頁內容並創建容器
+            const tabPanel = document.getElementById('tab-orders-list');
+            if (tabPanel) {
+                let container = tabPanel.querySelector('.table-container');
+                if (!container) {
+                    container = document.createElement('div');
+                    container.className = 'table-container';
+                    tabPanel.appendChild(container);
+                }
+                tableContainer = container;
+            } else {
+                return;
+            }
         }
         
         if (isMobile) {
@@ -5028,10 +5168,38 @@ async function loadLicenseActivations() {
         
         // 檢測是否為手機版
         const isMobile = window.innerWidth <= 768;
-        const tableContainer = await waitFor('#license-activations .table-container', 8000).catch(() => null);
+        // 更新選擇器以適配新的標籤頁結構
+        let tableContainer = document.querySelector('#tab-licenses-list .table-container') || 
+                             document.querySelector('#license-activations .table-container');
+        
+        if (!tableContainer) {
+            // 等待元素出現（標籤頁可能需要時間顯示）
+            tableContainer = await waitFor('#tab-licenses-list .table-container, #license-activations .table-container', 3000).catch(() => null);
+        }
+        
         if (!tableContainer) {
             console.error('找不到授權記錄表格容器');
-            return;
+            // 嘗試直接查找標籤頁內容並創建容器
+            const tabPanel = document.getElementById('tab-licenses-list');
+            if (tabPanel) {
+                // 查找已有的 table-container，如果沒有則創建
+                let container = tabPanel.querySelector('.table-container');
+                if (!container) {
+                    // 檢查是否在 panel-header 之後，如果是則在 panel-header 之後插入
+                    const panelHeader = tabPanel.querySelector('.panel-header');
+                    container = document.createElement('div');
+                    container.className = 'table-container';
+                    if (panelHeader && panelHeader.nextSibling) {
+                        tabPanel.insertBefore(container, panelHeader.nextSibling);
+                    } else {
+                        tabPanel.appendChild(container);
+                    }
+                }
+                tableContainer = container;
+            } else {
+                console.error('找不到授權記錄標籤頁面板');
+                return;
+            }
         }
         
         if (isMobile) {

@@ -434,7 +434,7 @@
       }
       
       .tab-panel.active {
-        display: block;
+        display: block !important;
       }
       
       @keyframes fadeIn {
@@ -1183,7 +1183,7 @@
                                         <option value="ppa">PPA</option>
                                         <option value="ecpay">官網購買</option>
                                     </select>
-                </div>
+                                </div>
                             </div>
                             <div class="table-container"></div>
                         </div>
@@ -1404,11 +1404,11 @@
                                         <div class="mode-stats-grid">
                                             <div class="mode-stat">
                                                 <span class="label">使用次數</span>
-                                                <span class="value" id="mode1-count">-</span>
+                                                <span class="value" id="modes-analysis-mode1-count">-</span>
                                             </div>
                                             <div class="mode-stat">
                                                 <span class="label">完成率</span>
-                                                <span class="value" id="mode1-completion">-</span>
+                                                <span class="value" id="modes-analysis-mode1-completion">-</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1417,11 +1417,11 @@
                                         <div class="mode-stats-grid">
                                             <div class="mode-stat">
                                                 <span class="label">對話數</span>
-                                                <span class="value" id="mode2-count">-</span>
+                                                <span class="value" id="modes-analysis-mode2-count">-</span>
                                             </div>
                                             <div class="mode-stat">
                                                 <span class="label">平均對話輪數</span>
-                                                <span class="value" id="mode2-avg">-</span>
+                                                <span class="value" id="modes-analysis-mode2-avg">-</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1430,11 +1430,11 @@
                                         <div class="mode-stats-grid">
                                             <div class="mode-stat">
                                                 <span class="label">使用次數</span>
-                                                <span class="value" id="mode3-count">-</span>
+                                                <span class="value" id="modes-analysis-mode3-count">-</span>
                                             </div>
                                             <div class="mode-stat">
                                                 <span class="label">生成Profile</span>
-                                                <span class="value" id="mode3-profile">-</span>
+                                                <span class="value" id="modes-analysis-mode3-profile">-</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1442,7 +1442,7 @@
                             </div>
                             <div class="chart-card">
                                 <h3>模式使用時間分布</h3>
-                                <canvas id="mode-time-chart"></canvas>
+                                <canvas id="modes-analysis-mode-time-chart"></canvas>
                             </div>
                         </div>
                     </div>
@@ -1813,6 +1813,6 @@
 
     <!-- 載入 Chart.js（使用 defer 延遲載入） -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
-    <script src="app.js?v=20251204-2" defer></script>
+    <script src="app.js?v=20251204-3" defer></script>
 </body>
 </html>
