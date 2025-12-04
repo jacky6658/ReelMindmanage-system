@@ -490,6 +490,38 @@
     </style>
   </head>
 <body>
+    <!-- 載入指示器 -->
+    <div id="loading-overlay" style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.95);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 99999;
+        transition: opacity 0.3s ease;
+    ">
+        <div style="
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        "></div>
+        <p style="margin-top: 20px; color: #6b7280; font-size: 1rem;">載入中...</p>
+        <style>
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        </style>
+    </div>
+    
     <div class="dashboard-container">
         <!-- 側邊欄 -->
         <div class="sidebar">
@@ -1779,8 +1811,8 @@
         <div class="context-menu-item copy" onclick="copyCellText()">複製</div>
     </div>
 
-    <!-- 載入 Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="app.js?v=20251204-1"></script>
+    <!-- 載入 Chart.js（使用 defer 延遲載入） -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
+    <script src="app.js?v=20251204-2" defer></script>
 </body>
 </html>

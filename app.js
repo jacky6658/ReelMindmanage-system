@@ -4,6 +4,69 @@ const API_BASE_URL = 'https://api.aijob.com.tw/api';
 // 全域變數
 let charts = {};
 
+// API 請求緩存和去重
+const apiCache = new Map();
+const pendingRequests = new Map();
+const CACHE_DURATION = 30000; // 30秒緩存
+
+// 優化的 fetch 函數（帶緩存和去重）
+async function cachedAdminFetch(url, options = {}, useCache = true) {
+    const cacheKey = `${url}_${JSON.stringify(options)}`;
+    const now = Date.now();
+    
+    // 檢查緩存
+    if (useCache && apiCache.has(cacheKey)) {
+        const cached = apiCache.get(cacheKey);
+        if (now - cached.timestamp < CACHE_DURATION) {
+            console.log(`[Cache Hit] ${url}`);
+            // 返回一個具有相同接口的對象
+            const cachedResponse = {
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                headers: new Headers({ 'Content-Type': 'application/json' }),
+                json: async () => cached.data,
+                text: async () => JSON.stringify(cached.data),
+                clone: () => cachedResponse
+            };
+            return cachedResponse;
+        }
+    }
+    
+    // 檢查是否有正在進行的相同請求
+    if (pendingRequests.has(cacheKey)) {
+        console.log(`[Request Dedup] ${url}`);
+        return await pendingRequests.get(cacheKey);
+    }
+    
+    // 發起新請求
+    const requestPromise = adminFetch(url, options)
+        .then(async (response) => {
+            if (response.ok && useCache) {
+                const data = await response.clone().json();
+                apiCache.set(cacheKey, {
+                    data,
+                    timestamp: now
+                });
+            }
+            pendingRequests.delete(cacheKey);
+            return response;
+        })
+        .catch(error => {
+            pendingRequests.delete(cacheKey);
+            throw error;
+        });
+    
+    pendingRequests.set(cacheKey, requestPromise);
+    return requestPromise;
+}
+
+// 清除緩存
+function clearApiCache() {
+    apiCache.clear();
+    pendingRequests.clear();
+}
+
 // 全局函數定義（確保在頁面載入時即可使用）
 window.switchToSection = function(section, tabId = null) {
     // 延遲到 DOM 載入完成後執行
@@ -506,10 +569,10 @@ function checkTokenStatus() {
 // 定期更新最近活動（每30秒更新一次）
 function startActivityMonitor() {
     setInterval(() => {
-        // 只在當前頁面是概覽頁面時更新
+        // 只在當前頁面是儀表板時更新
         const activeSection = document.querySelector('.section.active');
-        if (activeSection && activeSection.id === 'overview') {
-            loadRecentActivities();
+        if (activeSection && (activeSection.id === 'dashboard' || activeSection.id === 'overview')) {
+            loadDashboardRecentActivities();
         }
     }, 30000); // 每30秒更新一次
 }
@@ -541,33 +604,87 @@ async function waitFor(selector, timeout = 5000, interval = 50) {
     });
 }
 
-// 初始化
-document.addEventListener('DOMContentLoaded', async function() {
-    // 檢查管理員認證
-    await checkAdminAuth();
-    
-    // 啟動 token 監控（每 30 秒檢查一次，更快檢測過期）
-    startTokenMonitor();
-    
-    // 啟動活動監控（每30秒更新一次）
-    startActivityMonitor();
-    
-    // 檢查 token 狀態，如果未登入則不執行後續操作
-    if (!checkTokenStatus()) {
-        // 未登入，登入視窗已顯示，不執行數據載入
-        console.log('⚠️ 未登入，等待用戶登入...');
-        // 只初始化基本 UI 功能（時間顯示、導航等），不載入數據
-        initializeNavigation();
-        updateTime();
-        setInterval(updateTime, 1000);
-        return;
+// 載入指示器控制
+function hideLoadingOverlay() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.style.opacity = '0';
+        setTimeout(() => {
+            overlay.style.display = 'none';
+        }, 300);
     }
+}
+
+function showLoadingOverlay() {
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) {
+        overlay.style.display = 'flex';
+        overlay.style.opacity = '1';
+    }
+}
+
+// 初始化（優化載入順序）
+document.addEventListener('DOMContentLoaded', async function() {
+    const startTime = performance.now();
     
-    // 已登入，正常初始化
+    // 優先顯示 UI 框架（導航、時間等）
     initializeNavigation();
     updateTime();
     setInterval(updateTime, 1000);
-    loadDashboard();
+    
+    // 檢查管理員認證（非阻塞）
+    checkAdminAuth().then(() => {
+        // 啟動監控（延遲啟動，不阻塞初始化）
+        setTimeout(() => {
+            startTokenMonitor();
+            startActivityMonitor();
+        }, 1000);
+        
+        // 檢查 token 狀態
+        if (!checkTokenStatus()) {
+            console.log('⚠️ 未登入，等待用戶登入...');
+            hideLoadingOverlay();
+            return;
+        }
+        
+        // 已登入，延遲載入數據（讓 UI 先顯示）
+        setTimeout(async () => {
+            try {
+                // 先載入關鍵數據（不包含圖表）
+                await loadDashboardCore();
+                
+                // 延遲載入圖表（等 Chart.js 載入完成）
+                if (typeof Chart !== 'undefined') {
+                    loadDashboardCharts();
+                } else {
+                    // 等待 Chart.js 載入
+                    let chartLoadAttempts = 0;
+                    const checkChart = setInterval(() => {
+                        chartLoadAttempts++;
+                        if (typeof Chart !== 'undefined') {
+                            clearInterval(checkChart);
+                            loadDashboardCharts();
+                        } else if (chartLoadAttempts > 20) {
+                            // 10秒後超時
+                            clearInterval(checkChart);
+                            console.warn('Chart.js 載入超時');
+                            hideLoadingOverlay();
+                        }
+                    }, 500);
+                }
+                
+                const loadTime = ((performance.now() - startTime) / 1000).toFixed(2);
+                console.log(`✅ 頁面載入完成，耗時 ${loadTime} 秒`);
+                hideLoadingOverlay();
+            } catch (error) {
+                console.error('載入數據失敗:', error);
+                hideLoadingOverlay();
+            }
+        }, 100); // 100ms 後開始載入數據，讓 UI 先渲染
+    }).catch(error => {
+        console.error('認證檢查失敗:', error);
+        hideLoadingOverlay();
+    });
     
     // 監聽視窗大小改變，重新載入當前頁面數據以切換佈局
     let resizeTimer;
@@ -745,7 +862,18 @@ function switchDashboardTab(tabsContainer, tabId) {
     tabPanels.forEach(panel => {
         if (panel.id === `tab-${tabId}`) {
             panel.classList.add('active');
-            loadDashboardTabData(tabId);
+            // 延遲載入標籤頁數據（只在可見時載入）
+            if (typeof Chart !== 'undefined') {
+                loadDashboardTabData(tabId);
+            } else {
+                // 等待 Chart.js 載入
+                const checkChart = setInterval(() => {
+                    if (typeof Chart !== 'undefined') {
+                        clearInterval(checkChart);
+                        loadDashboardTabData(tabId);
+                    }
+                }, 100);
+            }
         } else {
             panel.classList.remove('active');
         }
@@ -940,9 +1068,14 @@ function refreshData() {
         return;
     }
     
-    const activeSection = document.querySelector('.section.active').id;
-    loadSectionData(activeSection);
-    showToast('數據已重新整理', 'success');
+    // 清除緩存
+    clearApiCache();
+    
+    const activeSection = document.querySelector('.section.active');
+    if (activeSection) {
+        loadSectionData(activeSection.id);
+        showToast('數據已重新整理', 'success');
+    }
 }
 
 // Toast 提示
@@ -970,10 +1103,11 @@ function showToast(message, type = 'info') {
 }
 
 // ===== 統一儀表板 =====
-async function loadDashboard() {
+// 核心數據載入（快速顯示關鍵指標）
+async function loadDashboardCore() {
     try {
-        // 載入統計數據
-        const statsResponse = await adminFetch(`${API_BASE_URL}/admin/statistics`);
+        // 只載入統計數據（關鍵數據，使用緩存）
+        const statsResponse = await cachedAdminFetch(`${API_BASE_URL}/admin/statistics`, {}, true);
         const stats = await statsResponse.json();
         
         // 更新儀表板核心指標（添加空值檢查）
@@ -994,42 +1128,90 @@ async function loadDashboard() {
             dashboardScriptsEl.textContent = stats.total_scripts || 0;
         }
         
-        // 計算營收（如果有訂單數據）
+        // 營收計算延遲載入（非關鍵數據）
         if (dashboardRevenueEl) {
-            try {
-                const ordersResponse = await adminFetch(`${API_BASE_URL}/admin/orders`);
-                const ordersData = await ordersResponse.json();
-                const orders = ordersData.orders || [];
-                const now = new Date();
-                const monthlyRevenue = orders
-                    .filter(o => {
-                        if (o.payment_status !== 'paid' || !o.paid_at) return false;
-                        const paidDate = new Date(o.paid_at);
-                        return paidDate.getMonth() === now.getMonth() && 
-                               paidDate.getFullYear() === now.getFullYear();
-                    })
-                    .reduce((sum, o) => sum + (o.amount || 0), 0);
-                dashboardRevenueEl.textContent = `NT$ ${monthlyRevenue.toLocaleString()}`;
-            } catch (e) {
-                console.error('計算營收失敗:', e);
-                dashboardRevenueEl.textContent = 'NT$ 0';
-            }
+            // 顯示載入中
+            dashboardRevenueEl.textContent = '計算中...';
+            // 延遲載入訂單數據
+            setTimeout(async () => {
+                try {
+                    const ordersResponse = await cachedAdminFetch(`${API_BASE_URL}/admin/orders`, {}, true);
+                    const ordersData = await ordersResponse.json();
+                    const orders = ordersData.orders || [];
+                    const now = new Date();
+                    const monthlyRevenue = orders
+                        .filter(o => {
+                            if (o.payment_status !== 'paid' || !o.paid_at) return false;
+                            const paidDate = new Date(o.paid_at);
+                            return paidDate.getMonth() === now.getMonth() && 
+                                   paidDate.getFullYear() === now.getFullYear();
+                        })
+                        .reduce((sum, o) => sum + (o.amount || 0), 0);
+                    dashboardRevenueEl.textContent = `NT$ ${monthlyRevenue.toLocaleString()}`;
+                } catch (e) {
+                    console.error('計算營收失敗:', e);
+                    dashboardRevenueEl.textContent = 'NT$ 0';
+                }
+            }, 500); // 延遲500ms載入
         }
         
-        // 載入圖表數據
-        loadDashboardOverviewCharts(stats);
+        // 載入最近活動（輕量數據）
         loadDashboardRecentActivities();
         
-        // 更新快速操作區的統計數據
-        updateQuickActionsStats(stats);
+        // 保存統計數據供後續使用
+        window.dashboardStats = stats;
+        
+        return stats;
     } catch (error) {
-        console.error('載入儀表板數據失敗:', error);
+        console.error('載入儀表板核心數據失敗:', error);
         showToast('載入數據失敗', 'error');
+        throw error;
     }
+}
+
+// 載入圖表（延遲載入，只在標籤頁可見時載入）
+async function loadDashboardCharts() {
+    try {
+        const stats = window.dashboardStats;
+        if (!stats) {
+            // 如果還沒有統計數據，先載入（使用緩存）
+            const statsResponse = await cachedAdminFetch(`${API_BASE_URL}/admin/statistics`, {}, true);
+            window.dashboardStats = await statsResponse.json();
+        }
+        // 只載入當前可見的標籤頁圖表
+        const activeTab = document.querySelector('.dashboard-tab-btn.active');
+        if (activeTab) {
+            const tabId = activeTab.getAttribute('data-tab');
+            if (tabId === 'overview') {
+                await loadDashboardOverviewCharts(window.dashboardStats);
+            }
+        }
+    } catch (error) {
+        console.error('載入儀表板圖表失敗:', error);
+    }
+}
+
+// 完整儀表板載入（向後兼容）
+async function loadDashboard() {
+    await loadDashboardCore();
+    if (typeof Chart !== 'undefined') {
+        await loadDashboardCharts();
+    } else {
+        // 等待 Chart.js 載入
+        const checkChart = setInterval(() => {
+            if (typeof Chart !== 'undefined') {
+                clearInterval(checkChart);
+                loadDashboardCharts();
+            }
+        }, 100);
+    }
+    updateQuickActionsStats(window.dashboardStats);
 }
 
 // 刷新儀表板
 async function refreshDashboard() {
+    // 清除緩存
+    clearApiCache();
     await loadDashboard();
     showToast('儀表板已重新整理', 'success');
 }
@@ -1044,12 +1226,12 @@ function updateQuickActionsStats(stats) {
 async function loadDashboardOverviewCharts(stats = null) {
     try {
         if (!stats) {
-            const statsResponse = await adminFetch(`${API_BASE_URL}/admin/statistics`);
+            const statsResponse = await cachedAdminFetch(`${API_BASE_URL}/admin/statistics`, {}, true);
             stats = await statsResponse.json();
         }
         
-        // 載入模式統計
-        const modeResponse = await adminFetch(`${API_BASE_URL}/admin/mode-statistics`);
+        // 載入模式統計（使用緩存）
+        const modeResponse = await cachedAdminFetch(`${API_BASE_URL}/admin/mode-statistics`, {}, true);
         const modeData = await modeResponse.json();
         
         // 用戶增長趨勢圖
