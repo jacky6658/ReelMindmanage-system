@@ -77,6 +77,416 @@
         content: "📋";
         font-size: 16px;
       }
+      
+      /* 儀表板樣式 */
+      .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+      }
+      
+      .dashboard-header h1 {
+        margin: 0;
+        font-size: 1.875rem;
+        color: #1f2937;
+      }
+      
+      .dashboard-actions {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+      }
+      
+      .time-range-selector {
+        padding: 0.5rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        background: white;
+        font-size: 0.875rem;
+        cursor: pointer;
+      }
+      
+      .dashboard-metrics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+      }
+      
+      .metric-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      
+      .metric-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      }
+      
+      .metric-card.primary { border-left: 4px solid #3b82f6; }
+      .metric-card.success { border-left: 4px solid #10b981; }
+      .metric-card.info { border-left: 4px solid #8b5cf6; }
+      .metric-card.warning { border-left: 4px solid #f59e0b; }
+      
+      .metric-icon {
+        font-size: 2.5rem;
+        line-height: 1;
+      }
+      
+      .metric-content {
+        flex: 1;
+      }
+      
+      .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1f2937;
+        line-height: 1.2;
+        margin-bottom: 0.25rem;
+      }
+      
+      .metric-label {
+        font-size: 0.875rem;
+        color: #6b7280;
+        margin-bottom: 0.5rem;
+      }
+      
+      .metric-change {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+      
+      .metric-change.positive { color: #10b981; }
+      .metric-change.negative { color: #ef4444; }
+      
+      .dashboard-quick-actions {
+        margin-bottom: 2rem;
+      }
+      
+      .dashboard-section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 1rem;
+      }
+      
+      .quick-actions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+      }
+      
+      .quick-action-card {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        text-decoration: none;
+        color: inherit;
+        transition: transform 0.2s, box-shadow 0.2s;
+        position: relative;
+        display: block;
+      }
+      
+      .quick-action-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      }
+      
+      .quick-action-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+      }
+      
+      .quick-action-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 0.25rem;
+      }
+      
+      .quick-action-desc {
+        font-size: 0.875rem;
+        color: #6b7280;
+      }
+      
+      .quick-action-badge {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        background: #3b82f6;
+        color: white;
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+      }
+      
+      /* 儀表板標籤頁樣式 */
+      .dashboard-tabs {
+        display: flex;
+        gap: 0.5rem;
+        border-bottom: 2px solid #e5e7eb;
+        margin-bottom: 1.5rem;
+      }
+      
+      .dashboard-tab-btn {
+        padding: 0.75rem 1.5rem;
+        background: transparent;
+        border: none;
+        border-bottom: 2px solid transparent;
+        color: #6b7280;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        margin-bottom: -2px;
+      }
+      
+      .dashboard-tab-btn:hover {
+        color: #3b82f6;
+      }
+      
+      .dashboard-tab-btn.active {
+        color: #3b82f6;
+        border-bottom-color: #3b82f6;
+      }
+      
+      .dashboard-tab-content {
+        position: relative;
+      }
+      
+      .dashboard-tab-panel {
+        display: none;
+      }
+      
+      .dashboard-tab-panel.active {
+        display: block;
+      }
+      
+      .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+      }
+      
+      .chart-wrapper {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      }
+      
+      .chart-wrapper.large {
+        grid-column: span 2;
+      }
+      
+      .chart-wrapper.medium {
+        grid-column: span 1;
+      }
+      
+      .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+      
+      .chart-header h4 {
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1f2937;
+      }
+      
+      .chart-period {
+        font-size: 0.75rem;
+        color: #6b7280;
+      }
+      
+      .dashboard-recent-activity {
+        background: white;
+        border-radius: 8px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-top: 2rem;
+      }
+      
+      .activity-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+      
+      .activity-header h3 {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #1f2937;
+      }
+      
+      .view-all-link {
+        color: #3b82f6;
+        text-decoration: none;
+        font-size: 0.875rem;
+        font-weight: 500;
+      }
+      
+      .view-all-link:hover {
+        text-decoration: underline;
+      }
+      
+      /* 功能中心標籤頁樣式 */
+      .center-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      }
+      
+      .center-header h2 {
+        margin: 0;
+        font-size: 1.5rem;
+        color: #1f2937;
+      }
+      
+      .tabs-container {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        overflow: hidden;
+      }
+      
+      .tabs-nav {
+        display: flex;
+        gap: 0;
+        border-bottom: 2px solid #e5e7eb;
+        background: #f9fafb;
+        overflow-x: auto;
+      }
+      
+      .tab-btn {
+        padding: 1rem 1.5rem;
+        background: transparent;
+        border: none;
+        border-bottom: 3px solid transparent;
+        color: #6b7280;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        white-space: nowrap;
+        position: relative;
+        margin-bottom: -2px;
+      }
+      
+      .tab-btn:hover {
+        color: #3b82f6;
+        background: rgba(59, 130, 246, 0.05);
+      }
+      
+      .tab-btn.active {
+        color: #3b82f6;
+        border-bottom-color: #3b82f6;
+        background: white;
+      }
+      
+      .tab-icon {
+        font-size: 1rem;
+      }
+      
+      .tab-badge {
+        background: #e5e7eb;
+        color: #374151;
+        font-size: 0.75rem;
+        padding: 0.125rem 0.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        margin-left: 0.25rem;
+      }
+      
+      .tab-btn.active .tab-badge {
+        background: #3b82f6;
+        color: white;
+      }
+      
+      .tabs-content {
+        padding: 1.5rem;
+      }
+      
+      .tab-panel {
+        display: none;
+        animation: fadeIn 0.3s ease-in;
+      }
+      
+      .tab-panel.active {
+        display: block;
+      }
+      
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      .panel-header {
+        margin-bottom: 1.5rem;
+      }
+      
+      @media (max-width: 768px) {
+        .dashboard-metrics {
+          grid-template-columns: 1fr;
+        }
+        
+        .quick-actions-grid {
+          grid-template-columns: 1fr;
+        }
+        
+        .charts-grid .chart-wrapper.large {
+          grid-column: span 1;
+        }
+        
+        .dashboard-header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 1rem;
+        }
+        
+        .center-header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 1rem;
+        }
+        
+        .tabs-nav {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+        
+        .tab-btn {
+          padding: 0.75rem 1rem;
+          font-size: 0.8rem;
+        }
+      }
     </style>
   </head>
 <body>
@@ -88,69 +498,35 @@
                 <p>後台管理系統</p>
             </div>
             <nav class="sidebar-nav">
-                <a href="#" class="nav-item active" data-section="overview">
+                <!-- 統一儀表板（首頁） -->
+                <a href="#" class="nav-item active" data-section="dashboard">
                     <span class="icon">📊</span>
-                    <span>數據概覽</span>
+                    <span>數據儀表板</span>
                 </a>
-                <a href="#" class="nav-item" data-section="users">
+                <!-- 用戶管理中心（標籤頁） -->
+                <a href="#" class="nav-item" data-section="users-center">
                     <span class="icon">👥</span>
-                    <span>用戶管理</span>
+                    <span>用戶管理中心</span>
                 </a>
-                <a href="#" class="nav-item" data-section="modes">
-                    <span class="icon">🎯</span>
-                    <span>模式分析</span>
-                </a>
-                <a href="#" class="nav-item" data-section="conversations">
-                    <span class="icon">💬</span>
-                    <span>對話記錄</span>
-                </a>
-                <a href="#" class="nav-item" data-section="long-term-memory">
-                    <span class="icon">🧠</span>
-                    <span>長期記憶</span>
-                </a>
-                <a href="#" class="nav-item" data-section="scripts">
+                <!-- 內容管理中心（標籤頁） -->
+                <a href="#" class="nav-item" data-section="content-center">
                     <span class="icon">📝</span>
-                    <span>腳本管理</span>
+                    <span>內容管理中心</span>
                 </a>
-                <a href="#" class="nav-item" data-section="ip-planning">
-                    <span class="icon">🎭</span>
-                    <span>IP人設規劃</span>
+                <!-- 商業管理中心（標籤頁） -->
+                <a href="#" class="nav-item" data-section="business-center">
+                    <span class="icon">💰</span>
+                    <span>商業管理中心</span>
                 </a>
-                <a href="#" class="nav-item" data-section="orders">
-                    <span class="icon">💳</span>
-                    <span>購買記錄</span>
+                <!-- 系統維護中心（標籤頁） -->
+                <a href="#" class="nav-item" data-section="system-center">
+                    <span class="icon">🔧</span>
+                    <span>系統維護中心</span>
                 </a>
-                <a href="#" class="nav-item" data-section="referrals">
-                    <span class="icon">🎁</span>
-                    <span>推薦＆獎勵</span>
-                </a>
-                <a href="#" class="nav-item" data-section="order-cleanup-logs">
-                    <span class="icon">🧹</span>
-                    <span>訂單清理日誌</span>
-                </a>
-                <a href="#" class="nav-item" data-section="license-activations">
-                    <span class="icon">🔗</span>
-                    <span>授權記錄</span>
-                </a>
-                <a href="#" class="nav-item" data-section="generations" style="display: none;">
-                    <span class="icon">✨</span>
-                    <span>生成記錄</span>
-                </a>
-                <a href="#" class="nav-item" data-section="analytics">
-                    <span class="icon">📈</span>
-                    <span>數據分析</span>
-                </a>
-                <a href="#" class="nav-item" data-section="usage-statistics">
-                    <span class="icon">📊</span>
-                    <span>使用統計</span>
-                </a>
-                <a href="#" class="nav-item" data-section="llm-keys">
-                    <span class="icon">🔑</span>
-                    <span>LLM Key 綁定</span>
-                </a>
+                <!-- 系統設定 -->
                 <a href="#" class="nav-item" data-section="admin-settings">
                     <span class="icon">⚙️</span>
-                    <span>管理員設定</span>
+                    <span>系統設定</span>
                 </a>
             </nav>
             <div class="sidebar-footer">
@@ -173,60 +549,247 @@
                 </div>
             </header>
 
-            <!-- 數據概覽頁面 -->
-            <div class="section active" id="overview">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon">👥</div>
-                        <div class="stat-info">
-                            <h3 id="total-users">-</h3>
-                            <p>總用戶數</p>
+            <!-- 統一儀表板頁面（方案三） -->
+            <div class="section active" id="dashboard">
+                <div class="dashboard-header">
+                    <h1>📊 數據儀表板</h1>
+                    <div class="dashboard-actions">
+                        <button class="btn-refresh" onclick="refreshDashboard()">🔄 重新整理</button>
+                        <select class="time-range-selector" onchange="changeTimeRange(this.value)">
+                            <option value="today">今天</option>
+                            <option value="week">本週</option>
+                            <option value="month" selected>本月</option>
+                            <option value="year">本年</option>
+                        </select>
                         </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">💬</div>
-                        <div class="stat-info">
-                            <h3 id="total-conversations">-</h3>
-                            <p>對話總數</p>
+
+                <!-- 核心指標卡片區 -->
+                <div class="dashboard-metrics">
+                    <div class="metric-card primary">
+                        <div class="metric-icon">👥</div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="dashboard-total-users">-</div>
+                            <div class="metric-label">總用戶數</div>
+                            <div class="metric-change positive" id="dashboard-users-change">
+                                <span class="change-icon">↑</span>
+                                <span class="change-value">0%</span>
                         </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">📝</div>
-                        <div class="stat-info">
-                            <h3 id="total-scripts">-</h3>
-                            <p>生成腳本</p>
+                        </div>
+                    
+                    <div class="metric-card success">
+                        <div class="metric-icon">💬</div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="dashboard-total-conversations">-</div>
+                            <div class="metric-label">對話總數</div>
+                            <div class="metric-change positive" id="dashboard-conversations-change">
+                                <span class="change-icon">↑</span>
+                                <span class="change-value">0%</span>
+                    </div>
                         </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">🎯</div>
-                        <div class="stat-info">
-                            <h3 id="total-positioning">-</h3>
-                            <p>帳號定位</p>
+                    
+                    <div class="metric-card info">
+                        <div class="metric-icon">📝</div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="dashboard-total-scripts">-</div>
+                            <div class="metric-label">生成腳本</div>
+                            <div class="metric-change positive" id="dashboard-scripts-change">
+                                <span class="change-icon">↑</span>
+                                <span class="change-value">0%</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="charts-container">
-                    <div class="chart-card">
-                        <h3>用戶增長趨勢</h3>
-                        <canvas id="user-growth-chart"></canvas>
+                    <div class="metric-card warning">
+                        <div class="metric-icon">💰</div>
+                        <div class="metric-content">
+                            <div class="metric-value" id="dashboard-total-revenue">-</div>
+                            <div class="metric-label">本月營收</div>
+                            <div class="metric-change positive" id="dashboard-revenue-change">
+                                <span class="change-icon">↑</span>
+                                <span class="change-value">0%</span>
                     </div>
-                    <div class="chart-card">
-                        <h3>模式使用分布</h3>
-                        <canvas id="mode-distribution-chart"></canvas>
+                        </div>
                     </div>
                 </div>
 
-                <div class="recent-activity">
+                <!-- 快速操作卡片區 -->
+                <div class="dashboard-quick-actions">
+                    <h3 class="dashboard-section-title">快速操作</h3>
+                    <div class="quick-actions-grid">
+                        <a href="#" class="quick-action-card" onclick="switchToSection('users-center', 'users-list'); return false;">
+                            <div class="quick-action-icon">👥</div>
+                            <div class="quick-action-title">用戶管理</div>
+                            <div class="quick-action-desc">查看和管理用戶</div>
+                            <div class="quick-action-badge" id="new-users-count">0 新用戶</div>
+                        </a>
+                        
+                        <a href="#" class="quick-action-card" onclick="switchToSection('content-center', 'scripts-list'); return false;">
+                            <div class="quick-action-icon">📝</div>
+                            <div class="quick-action-title">腳本管理</div>
+                            <div class="quick-action-desc">管理生成的腳本</div>
+                            <div class="quick-action-badge" id="new-scripts-count">0 新腳本</div>
+                        </a>
+                        
+                        <a href="#" class="quick-action-card" onclick="switchToSection('business-center', 'orders-list'); return false;">
+                            <div class="quick-action-icon">💳</div>
+                            <div class="quick-action-title">購買記錄</div>
+                            <div class="quick-action-desc">查看訂單和付款</div>
+                            <div class="quick-action-badge" id="pending-orders-count">0 待處理</div>
+                        </a>
+                        
+                        <a href="#" class="quick-action-card" onclick="switchToSection('dashboard', 'analytics-tab'); return false;">
+                            <div class="quick-action-icon">📊</div>
+                            <div class="quick-action-title">數據分析</div>
+                            <div class="quick-action-desc">深入分析數據</div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- 數據視覺化區（標籤頁式） -->
+                <div class="dashboard-visualizations">
+                    <div class="dashboard-tabs">
+                        <button class="dashboard-tab-btn active" data-tab="overview">數據概覽</button>
+                        <button class="dashboard-tab-btn" data-tab="users">用戶分析</button>
+                        <button class="dashboard-tab-btn" data-tab="content">內容分析</button>
+                        <button class="dashboard-tab-btn" data-tab="business">商業分析</button>
+                    </div>
+                    
+                    <div class="dashboard-tab-content">
+                        <!-- 數據概覽標籤 -->
+                        <div class="dashboard-tab-panel active" id="tab-overview">
+                            <div class="charts-grid">
+                                <div class="chart-wrapper large">
+                                    <div class="chart-header">
+                                        <h4>用戶增長趨勢</h4>
+                                        <span class="chart-period">最近 30 天</span>
+                                    </div>
+                                    <canvas id="dashboard-user-growth-chart"></canvas>
+                                </div>
+                                
+                                <div class="chart-wrapper medium">
+                                    <div class="chart-header">
+                                        <h4>模式使用分布</h4>
+                                    </div>
+                                    <canvas id="dashboard-mode-distribution-chart"></canvas>
+                                </div>
+                                
+                                <div class="chart-wrapper medium">
+                                    <div class="chart-header">
+                                        <h4>平台使用分布</h4>
+                                    </div>
+                                    <canvas id="dashboard-platform-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 用戶分析標籤 -->
+                        <div class="dashboard-tab-panel" id="tab-users">
+                            <div class="charts-grid">
+                                <div class="chart-wrapper large">
+                                    <div class="chart-header">
+                                        <h4>用戶活躍度</h4>
+                                    </div>
+                                    <canvas id="dashboard-user-activity-chart"></canvas>
+                                </div>
+                                
+                                <div class="chart-wrapper medium">
+                                    <div class="chart-header">
+                                        <h4>新用戶註冊趨勢</h4>
+                                    </div>
+                                    <canvas id="dashboard-new-users-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 內容分析標籤 -->
+                        <div class="dashboard-tab-panel" id="tab-content">
+                            <div class="charts-grid">
+                                <div class="chart-wrapper large">
+                                    <div class="chart-header">
+                                        <h4>腳本生成趨勢</h4>
+                                    </div>
+                                    <canvas id="dashboard-scripts-trend-chart"></canvas>
+                                </div>
+                                
+                                <div class="chart-wrapper medium">
+                                    <div class="chart-header">
+                                        <h4>內容類型分布</h4>
+                                    </div>
+                                    <canvas id="dashboard-content-type-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 商業分析標籤 -->
+                        <div class="dashboard-tab-panel" id="tab-business">
+                            <div class="charts-grid">
+                                <div class="chart-wrapper large">
+                                    <div class="chart-header">
+                                        <h4>營收趨勢</h4>
+                                    </div>
+                                    <canvas id="dashboard-revenue-chart"></canvas>
+                                </div>
+                                
+                                <div class="chart-wrapper medium">
+                                    <div class="chart-header">
+                                        <h4>訂單狀態分布</h4>
+                                    </div>
+                                    <canvas id="dashboard-orders-status-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 最近活動區 -->
+                <div class="dashboard-recent-activity">
+                    <div class="activity-header">
                     <h3>最近活動</h3>
-                    <div class="activity-list" id="recent-activities"></div>
+                        <a href="#" class="view-all-link" onclick="switchToSection('users-center'); return false;">查看全部 →</a>
+                    </div>
+                    <div class="activity-list" id="dashboard-recent-activities">
+                        <!-- 活動項目將在這裡動態載入 -->
+                    </div>
                 </div>
             </div>
 
-            <!-- 用戶管理頁面 -->
-            <div class="section" id="users">
-                <div class="section-header">
-                    <h2>用戶管理</h2>
+            <!-- 用戶管理中心（標籤頁模式） -->
+            <div class="section" id="users-center">
+                <div class="center-header">
+                    <h2>👥 用戶管理中心</h2>
+                    <div class="center-actions">
+                        <button class="btn-export" onclick="exportData('users')">📥 匯出 CSV</button>
+                    </div>
+                </div>
+                
+                <!-- 標籤頁導航 -->
+                <div class="tabs-container">
+                    <div class="tabs-nav">
+                        <button class="tab-btn active" data-tab="users-list">
+                            <span class="tab-icon">👥</span>
+                            <span>用戶列表</span>
+                            <span class="tab-badge" id="users-count">-</span>
+                        </button>
+                        <button class="tab-btn" data-tab="conversations-list">
+                            <span class="tab-icon">💬</span>
+                            <span>對話記錄</span>
+                            <span class="tab-badge" id="conversations-count">-</span>
+                        </button>
+                        <button class="tab-btn" data-tab="memory-list">
+                            <span class="tab-icon">🧠</span>
+                            <span>長期記憶</span>
+                            <span class="tab-badge" id="memory-count">-</span>
+                        </button>
+                    </div>
+                    
+                    <!-- 標籤頁內容 -->
+                    <div class="tabs-content">
+                        <!-- 用戶列表標籤 -->
+                        <div class="tab-panel active" id="tab-users-list">
+                            <div class="panel-header">
                     <div class="filters">
                         <input type="text" id="user-search" placeholder="搜尋用戶..." onkeyup="filterUsers()">
                         <select id="user-filter-platform" onchange="filterUsers()">
@@ -250,6 +813,89 @@
                         </thead>
                         <tbody id="users-table-body"></tbody>
                     </table>
+                </div>
+            </div>
+
+                        <!-- 對話記錄標籤 -->
+                        <div class="tab-panel" id="tab-conversations-list">
+                            <div class="panel-header">
+                                <div class="filters">
+                    <select id="conversation-filter" onchange="loadConversations()">
+                        <option value="all">所有對話</option>
+                        <option value="mode2">AI顧問模式</option>
+                        <option value="mode3">IP人設規劃模式</option>
+                    </select>
+                                </div>
+                </div>
+                <div class="table-container">
+                    <table class="data-table" id="conversations-table">
+                        <thead>
+                            <tr>
+                                <th>用戶ID</th>
+                                <th>模式</th>
+                                <th>對話摘要</th>
+                                <th>消息數</th>
+                                <th>時間</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="conversations-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+                        <!-- 長期記憶標籤 -->
+                        <div class="tab-panel" id="tab-memory-list">
+                            <div class="panel-header">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">🧠</div>
+                        <div class="stat-info">
+                            <h3 id="total-memories">-</h3>
+                            <p>總記憶數</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">👥</div>
+                        <div class="stat-info">
+                            <h3 id="active-users-memory">-</h3>
+                            <p>活躍用戶</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">💬</div>
+                        <div class="stat-info">
+                            <h3 id="today-memories">-</h3>
+                            <p>今日新增</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-info">
+                            <h3 id="avg-memories-per-user">-</h3>
+                            <p>平均記憶/用戶</p>
+                        </div>
+                    </div>
+                </div>
+                            </div>
+                <div class="table-container">
+                    <table class="data-table" id="memory-table">
+                        <thead>
+                            <tr>
+                                <th>用戶</th>
+                                <th>用戶ID</th>
+                                <th>記憶數</th>
+                                <th>會話數</th>
+                                <th>對話類型</th>
+                                <th>時間範圍</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="memory-table-body"></tbody>
+                    </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -302,92 +948,33 @@
                 </div>
             </div>
 
-            <!-- 對話記錄頁面 -->
-            <div class="section" id="conversations">
-                <div class="section-header">
-                    <h2>對話記錄</h2>
-                    <select id="conversation-filter" onchange="loadConversations()">
-                        <option value="all">所有對話</option>
-                        <option value="mode2">AI顧問模式</option>
-                        <option value="mode3">IP人設規劃模式</option>
-                    </select>
-                </div>
-                <div class="table-container">
-                    <table class="data-table" id="conversations-table">
-                        <thead>
-                            <tr>
-                                <th>用戶ID</th>
-                                <th>模式</th>
-                                <th>對話摘要</th>
-                                <th>消息數</th>
-                                <th>時間</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="conversations-table-body"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- 長期記憶頁面 -->
-            <div class="section" id="long-term-memory">
-                <div class="section-header">
-                    <h2>長期記憶管理</h2>
-                </div>
-                
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-icon">🧠</div>
-                        <div class="stat-info">
-                            <h3 id="total-memories">-</h3>
-                            <p>總記憶數</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">👥</div>
-                        <div class="stat-info">
-                            <h3 id="active-users-memory">-</h3>
-                            <p>活躍用戶</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">💬</div>
-                        <div class="stat-info">
-                            <h3 id="today-memories">-</h3>
-                            <p>今日新增</p>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">📊</div>
-                        <div class="stat-info">
-                            <h3 id="avg-memories-per-user">-</h3>
-                            <p>平均記憶/用戶</p>
-                        </div>
+            <!-- 內容管理中心（標籤頁模式） -->
+            <div class="section" id="content-center">
+                <div class="center-header">
+                    <h2>📝 內容管理中心</h2>
+                    <div class="center-actions">
+                        <button class="btn-export" onclick="exportData('scripts')">📥 匯出 CSV</button>
                     </div>
                 </div>
                 
-                <div class="table-container">
-                    <table class="data-table" id="memory-table">
-                        <thead>
-                            <tr>
-                                <th>用戶</th>
-                                <th>用戶ID</th>
-                                <th>記憶數</th>
-                                <th>會話數</th>
-                                <th>對話類型</th>
-                                <th>時間範圍</th>
-                                <th>操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="memory-table-body"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- 腳本管理頁面 -->
-            <div class="section" id="scripts">
-                <div class="section-header">
-                    <h2>腳本管理</h2>
+                <!-- 標籤頁導航 -->
+                <div class="tabs-container">
+                    <div class="tabs-nav">
+                        <button class="tab-btn active" data-tab="scripts-list">
+                            <span class="tab-icon">📝</span>
+                            <span>腳本管理</span>
+                        </button>
+                        <button class="tab-btn" data-tab="ip-planning-list">
+                            <span class="tab-icon">🎭</span>
+                            <span>IP人設規劃</span>
+                        </button>
+                    </div>
+                    
+                    <!-- 標籤頁內容 -->
+                    <div class="tabs-content">
+                        <!-- 腳本管理標籤 -->
+                        <div class="tab-panel active" id="tab-scripts-list">
+                            <div class="panel-header">
                     <div class="filters">
                         <select id="script-filter-user" onchange="loadScripts()">
                             <option value="">所有用戶</option>
@@ -415,10 +1002,9 @@
                 </div>
             </div>
 
-            <!-- IP人設規劃管理頁面 -->
-            <div class="section" id="ip-planning">
-                <div class="section-header">
-                    <h2>IP人設規劃管理</h2>
+                        <!-- IP人設規劃標籤 -->
+                        <div class="tab-panel" id="tab-ip-planning-list">
+                            <div class="panel-header">
                     <div class="filters">
                         <select id="ip-planning-filter-type" onchange="loadIpPlanningResults()">
                             <option value="">所有類型</option>
@@ -446,28 +1032,49 @@
                         </thead>
                         <tbody id="ip-planning-table-body"></tbody>
                     </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- 購買記錄頁面 -->
-            <div class="section" id="orders">
-                <div class="section-header">
-                    <h2>購買記錄</h2>
-                    <button class="btn-export" onclick="exportCSV('orders')">📥 匯出 CSV</button>
+            <!-- 商業管理中心（標籤頁模式） -->
+            <div class="section" id="business-center">
+                <div class="center-header">
+                    <h2>💰 商業管理中心</h2>
+                    <div class="center-actions">
+                        <button class="btn-export" onclick="exportData('orders')">📥 匯出 CSV</button>
                 </div>
-                <div class="stats-grid" style="margin-bottom: 20px;"></div>
-                <div class="table-container"></div>
             </div>
 
-            <!-- 推薦＆獎勵監控頁面 -->
-            <div class="section" id="referrals">
-                <div class="section-header">
-                    <h2>推薦＆獎勵監控</h2>
-                    <button class="btn-refresh" onclick="loadReferrals()">🔄 重新整理</button>
+                <!-- 標籤頁導航 -->
+                <div class="tabs-container">
+                    <div class="tabs-nav">
+                        <button class="tab-btn active" data-tab="orders-list">
+                            <span class="tab-icon">💳</span>
+                            <span>購買記錄</span>
+                        </button>
+                        <button class="tab-btn" data-tab="referrals-list">
+                            <span class="tab-icon">🎁</span>
+                            <span>推薦＆獎勵</span>
+                        </button>
+                        <button class="tab-btn" data-tab="licenses-list">
+                            <span class="tab-icon">🔗</span>
+                            <span>授權記錄</span>
+                        </button>
                 </div>
                 
-                <!-- 統計卡片 -->
-                <div class="stats-grid" style="margin-bottom: 24px;">
+                    <!-- 標籤頁內容 -->
+                    <div class="tabs-content">
+                        <!-- 購買記錄標籤 -->
+                        <div class="tab-panel active" id="tab-orders-list">
+                            <div class="table-container"></div>
+                        </div>
+                        
+                        <!-- 推薦＆獎勵標籤 -->
+                        <div class="tab-panel" id="tab-referrals-list">
+                            <div class="panel-header">
+                                <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-icon">👥</div>
                         <div class="stat-info">
@@ -504,8 +1111,7 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- 詳細列表表格 -->
+                            </div>
                 <div class="table-container">
                     <table class="data-table" id="referrals-table">
                         <thead>
@@ -529,16 +1135,71 @@
                 </div>
             </div>
 
-            <!-- 訂單清理日誌頁面 -->
-            <div class="section" id="order-cleanup-logs">
-                <div class="section-header">
-                    <h2>訂單清理日誌</h2>
-                    <button class="btn-refresh" onclick="loadOrderCleanupLogs()">🔄 重新整理</button>
+                        <!-- 授權記錄標籤 -->
+                        <div class="tab-panel" id="tab-licenses-list">
+                            <div class="panel-header">
+                                <div class="filters">
+                                    <select id="activation-filter-status" onchange="loadLicenseActivations()">
+                                        <option value="">所有狀態</option>
+                                        <option value="pending">待啟用</option>
+                                        <option value="activated">已啟用</option>
+                                        <option value="expired">已過期</option>
+                                    </select>
+                                    <select id="activation-filter-channel" onchange="loadLicenseActivations()">
+                                        <option value="">所有通路</option>
+                                        <option value="portaly">Portaly</option>
+                                        <option value="ppa">PPA</option>
+                                        <option value="ecpay">官網購買</option>
+                                    </select>
                 </div>
+                            </div>
+                            <div class="table-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 系統維護中心（標籤頁模式） -->
+            <div class="section" id="system-center">
+                <div class="center-header">
+                    <h2>🔧 系統維護中心</h2>
+                </div>
+                
+                <!-- 標籤頁導航 -->
+                <div class="tabs-container">
+                    <div class="tabs-nav">
+                        <button class="tab-btn active" data-tab="cleanup-logs">
+                            <span class="tab-icon">🧹</span>
+                            <span>訂單清理日誌</span>
+                        </button>
+                        <button class="tab-btn" data-tab="analytics">
+                            <span class="tab-icon">📈</span>
+                            <span>數據分析</span>
+                        </button>
+                        <button class="tab-btn" data-tab="usage-stats">
+                            <span class="tab-icon">📊</span>
+                            <span>使用統計</span>
+                        </button>
+                        <button class="tab-btn" data-tab="llm-keys">
+                            <span class="tab-icon">🔑</span>
+                            <span>LLM Key 綁定</span>
+                        </button>
+                        <button class="tab-btn" data-tab="modes-analysis">
+                            <span class="tab-icon">🎯</span>
+                            <span>模式分析</span>
+                        </button>
+                    </div>
+                    
+                    <!-- 標籤頁內容 -->
+                    <div class="tabs-content">
+                        <!-- 訂單清理日誌標籤 -->
+                        <div class="tab-panel active" id="tab-cleanup-logs">
+                            <div class="panel-header">
                 <div style="padding: 12px 16px; background: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 4px; margin-bottom: 16px;">
                     <p style="margin: 0; color: #1e40af; font-size: 0.9rem;">
                         <strong>清理規則：</strong>系統會自動清理超過 <strong>24 小時</strong>的待付款訂單（payment_status = 'pending'）。清理任務通過定時任務觸發，通常每天執行一次。
                     </p>
+                                </div>
                 </div>
                 <div class="table-container">
                     <table class="data-table" id="cleanup-logs-table">
@@ -556,26 +1217,204 @@
                 </div>
             </div>
 
-            <!-- 授權記錄頁面 -->
-            <div class="section" id="license-activations">
-                <div class="section-header">
-                    <h2>授權記錄</h2>
+                        <!-- 數據分析標籤 -->
+                        <div class="tab-panel" id="tab-analytics">
+                            <div class="panel-header">
+                                <div class="stats-grid">
+                                    <div class="stat-card">
+                                        <div class="stat-icon">🔑</div>
+                                        <div class="stat-info">
+                                            <h3 id="llm-key-users-count">-</h3>
+                                            <p>已綁定 LLM Key 用戶數</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="analytics-grid">
+                                <div class="analytics-card">
+                                    <h3>平台使用分布</h3>
+                                    <canvas id="platform-chart"></canvas>
+                                </div>
+                                <div class="analytics-card">
+                                    <h3>時間段使用分析</h3>
+                                    <canvas id="time-usage-chart"></canvas>
+                                </div>
+                                <div class="analytics-card">
+                                    <h3>用戶活躍度</h3>
+                                    <canvas id="activity-chart"></canvas>
+                                </div>
+                                <div class="analytics-card">
+                                    <h3>內容類型分布</h3>
+                                    <canvas id="content-type-chart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 使用統計標籤 -->
+                        <div class="tab-panel" id="tab-usage-stats">
+                            <div class="panel-header">
                     <div class="filters">
-                        <select id="activation-filter-status" onchange="loadLicenseActivations()">
-                            <option value="">所有狀態</option>
-                            <option value="pending">待啟用</option>
-                            <option value="activated">已啟用</option>
-                            <option value="expired">已過期</option>
-                        </select>
-                        <select id="activation-filter-channel" onchange="loadLicenseActivations()">
-                            <option value="">所有通路</option>
-                            <option value="portaly">Portaly</option>
-                            <option value="ppa">PPA</option>
-                            <option value="ecpay">官網購買</option>
-                        </select>
+                                    <input type="date" id="usage-start-date" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; margin-right: 8px;">
+                                    <input type="date" id="usage-end-date" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; margin-right: 8px;">
+                                    <button onclick="loadUsageStatistics()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">查詢</button>
+                    </div>
+                                <div class="stats-grid">
+                                    <div class="stat-card">
+                                        <div class="stat-icon">📊</div>
+                                        <div class="stat-info">
+                                            <h3 id="total-events">-</h3>
+                                            <p>總事件數</p>
+                </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">👥</div>
+                                        <div class="stat-info">
+                                            <h3 id="active-users-count">-</h3>
+                                            <p>活躍用戶數</p>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">📄</div>
+                                        <div class="stat-info">
+                                            <h3 id="pdf-downloads">-</h3>
+                                            <p>PDF 下載次數</p>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">📋</div>
+                                        <div class="stat-info">
+                                            <h3 id="csv-downloads">-</h3>
+                                            <p>CSV 下載次數</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="analytics-grid">
+                                <div class="analytics-card">
+                                    <h3>事件類型分布</h3>
+                                    <canvas id="event-type-chart"></canvas>
+                                </div>
+                                <div class="analytics-card">
+                                    <h3>事件類別分布</h3>
+                                    <canvas id="event-category-chart"></canvas>
+                                </div>
+                                <div class="analytics-card">
+                                    <h3>每日事件趨勢（最近30天）</h3>
+                                    <canvas id="daily-trend-chart"></canvas>
+                                </div>
+                            </div>
+                            <div class="table-container" style="margin-top: 24px;">
+                                <h3 style="margin-bottom: 16px;">最活躍用戶（前10名）</h3>
+                                <div id="top-users-table">
+                                    <div style="text-align: center; padding: 40px; color: #6b7280;">載入中...</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- LLM Key 綁定標籤 -->
+                        <div class="tab-panel" id="tab-llm-keys">
+                            <div class="panel-header">
+                                <div class="stats-grid">
+                                    <div class="stat-card">
+                                        <div class="stat-icon">👥</div>
+                                        <div class="stat-info">
+                                            <h3 id="llm-total-users">-</h3>
+                                            <p>總用戶數</p>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">🔑</div>
+                                        <div class="stat-info">
+                                            <h3 id="llm-bound-users">-</h3>
+                                            <p>已綁定用戶數</p>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">❌</div>
+                                        <div class="stat-info">
+                                            <h3 id="llm-unbound-users">-</h3>
+                                            <p>未綁定用戶數</p>
+                                        </div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">📊</div>
+                                        <div class="stat-info">
+                                            <h3 id="llm-total-bindings">-</h3>
+                                            <p>總綁定數</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="analytics-grid">
+                                <div class="analytics-card">
+                                    <h3>Provider 分布</h3>
+                                    <canvas id="llm-provider-chart"></canvas>
+                                </div>
+                                <div class="analytics-card">
+                                    <h3>綁定趨勢（最近30天）</h3>
+                                    <canvas id="llm-binding-trend-chart"></canvas>
+                                </div>
+                            </div>
+                            <div class="table-container" style="margin-top: 24px;">
+                                <h3 style="margin-bottom: 16px;">已綁定用戶列表</h3>
+                                <div id="llm-bound-users-table">
+                                    <div style="text-align: center; padding: 40px; color: #6b7280;">載入中...</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 模式分析標籤 -->
+                        <div class="tab-panel" id="tab-modes-analysis">
+                            <div class="panel-header">
+                                <div class="mode-stats">
+                                    <div class="mode-card">
+                                        <h3>🎯 一鍵生成模式</h3>
+                                        <div class="mode-stats-grid">
+                                            <div class="mode-stat">
+                                                <span class="label">使用次數</span>
+                                                <span class="value" id="mode1-count">-</span>
+                                            </div>
+                                            <div class="mode-stat">
+                                                <span class="label">完成率</span>
+                                                <span class="value" id="mode1-completion">-</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mode-card">
+                                        <h3>💬 AI顧問模式</h3>
+                                        <div class="mode-stats-grid">
+                                            <div class="mode-stat">
+                                                <span class="label">對話數</span>
+                                                <span class="value" id="mode2-count">-</span>
+                                            </div>
+                                            <div class="mode-stat">
+                                                <span class="label">平均對話輪數</span>
+                                                <span class="value" id="mode2-avg">-</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mode-card">
+                                        <h3>🎭 IP人設規劃模式</h3>
+                                        <div class="mode-stats-grid">
+                                            <div class="mode-stat">
+                                                <span class="label">使用次數</span>
+                                                <span class="value" id="mode3-count">-</span>
+                                            </div>
+                                            <div class="mode-stat">
+                                                <span class="label">生成Profile</span>
+                                                <span class="value" id="mode3-profile">-</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="chart-card">
+                                <h3>模式使用時間分布</h3>
+                                <canvas id="mode-time-chart"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="table-container"></div>
             </div>
 
             <!-- 生成記錄頁面（已隱藏） -->

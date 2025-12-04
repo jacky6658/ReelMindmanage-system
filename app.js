@@ -552,7 +552,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     initializeNavigation();
     updateTime();
     setInterval(updateTime, 1000);
-    loadOverview();
+    loadDashboard();
     
     // 監聽視窗大小改變，重新載入當前頁面數據以切換佈局
     let resizeTimer;
@@ -581,9 +581,182 @@ function initializeNavigation() {
             switchSection(section);
         });
     });
+    
+    // 初始化標籤頁功能
+    initializeTabs();
+    
+    // 初始化儀表板標籤頁
+    initializeDashboardTabs();
 }
 
-function switchSection(section) {
+// 初始化標籤頁切換功能
+function initializeTabs() {
+    // 為所有標籤頁按鈕添加事件監聽
+    document.addEventListener('click', function(e) {
+        const tabBtn = e.target.closest('.tab-btn');
+        if (tabBtn && !tabBtn.classList.contains('active')) {
+            const tabId = tabBtn.getAttribute('data-tab');
+            const tabsContainer = tabBtn.closest('.tabs-container');
+            if (tabsContainer) {
+                switchTab(tabsContainer, tabId);
+            }
+        }
+    });
+    
+    // 從 localStorage 恢復標籤頁狀態
+    restoreTabStates();
+}
+
+// 切換標籤頁
+function switchTab(tabsContainer, tabId) {
+    // 更新按鈕狀態
+    const tabBtns = tabsContainer.querySelectorAll('.tab-btn');
+    tabBtns.forEach(btn => {
+        if (btn.getAttribute('data-tab') === tabId) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // 更新面板顯示
+    const tabPanels = tabsContainer.querySelectorAll('.tab-panel');
+    tabPanels.forEach(panel => {
+        if (panel.id === `tab-${tabId}`) {
+            panel.classList.add('active');
+            // 載入該標籤頁的數據
+            loadTabData(tabId);
+        } else {
+            panel.classList.remove('active');
+        }
+    });
+    
+    // 保存標籤頁狀態
+    const sectionId = tabsContainer.closest('.section')?.id;
+    if (sectionId) {
+        localStorage.setItem(`tab-${sectionId}`, tabId);
+    }
+}
+
+// 載入標籤頁數據
+function loadTabData(tabId) {
+    switch(tabId) {
+        case 'users-list':
+            loadUsers();
+            break;
+        case 'conversations-list':
+            loadConversations();
+            break;
+        case 'memory-list':
+            loadLongTermMemory();
+            break;
+        case 'scripts-list':
+            loadScripts();
+            break;
+        case 'ip-planning-list':
+            loadIpPlanningResults();
+            break;
+        case 'orders-list':
+            loadOrders();
+            break;
+        case 'referrals-list':
+            loadReferrals();
+            break;
+        case 'licenses-list':
+            loadLicenseActivations();
+            break;
+        case 'cleanup-logs':
+            loadOrderCleanupLogs();
+            break;
+        case 'analytics':
+            loadAnalytics();
+            break;
+        case 'usage-stats':
+            loadUsageStatistics();
+            break;
+        case 'llm-keys':
+            loadLlmKeysStatus();
+            break;
+        case 'modes-analysis':
+            loadModes();
+            break;
+    }
+}
+
+// 恢復標籤頁狀態
+function restoreTabStates() {
+    document.querySelectorAll('.tabs-container').forEach(container => {
+        const sectionId = container.closest('.section')?.id;
+        if (sectionId) {
+            const savedTab = localStorage.getItem(`tab-${sectionId}`);
+            if (savedTab) {
+                const tabBtn = container.querySelector(`[data-tab="${savedTab}"]`);
+                if (tabBtn) {
+                    switchTab(container, savedTab);
+                }
+            }
+        }
+    });
+}
+
+// 初始化儀表板標籤頁
+function initializeDashboardTabs() {
+    document.addEventListener('click', function(e) {
+        const dashboardTabBtn = e.target.closest('.dashboard-tab-btn');
+        if (dashboardTabBtn && !dashboardTabBtn.classList.contains('active')) {
+            const tabId = dashboardTabBtn.getAttribute('data-tab');
+            const tabsContainer = dashboardTabBtn.closest('.dashboard-visualizations');
+            if (tabsContainer) {
+                switchDashboardTab(tabsContainer, tabId);
+            }
+        }
+    });
+}
+
+// 切換儀表板標籤頁
+function switchDashboardTab(tabsContainer, tabId) {
+    // 更新按鈕狀態
+    const tabBtns = tabsContainer.querySelectorAll('.dashboard-tab-btn');
+    tabBtns.forEach(btn => {
+        if (btn.getAttribute('data-tab') === tabId) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // 更新面板顯示
+    const tabPanels = tabsContainer.querySelectorAll('.dashboard-tab-panel');
+    tabPanels.forEach(panel => {
+        if (panel.id === `tab-${tabId}`) {
+            panel.classList.add('active');
+            loadDashboardTabData(tabId);
+        } else {
+            panel.classList.remove('active');
+        }
+    });
+}
+
+// 載入儀表板標籤頁數據
+function loadDashboardTabData(tabId) {
+    // 根據不同的標籤頁載入對應的圖表數據
+    switch(tabId) {
+        case 'overview':
+            loadDashboardOverviewCharts();
+            break;
+        case 'users':
+            loadDashboardUsersCharts();
+            break;
+        case 'content':
+            loadDashboardContentCharts();
+            break;
+        case 'business':
+            loadDashboardBusinessCharts();
+            break;
+    }
+}
+
+function switchSection(section, tabId = null) {
     // 在切換頁面前檢查 token 狀態
     if (!checkTokenStatus()) {
         // Token 已過期或無效，登入視窗已顯示，不執行後續操作
@@ -594,10 +767,20 @@ function switchSection(section) {
     document.querySelectorAll('.nav-item').forEach(item => {
         item.classList.remove('active');
     });
-    document.querySelector(`[data-section="${section}"]`).classList.add('active');
+    const navItem = document.querySelector(`[data-section="${section}"]`);
+    if (navItem) {
+        navItem.classList.add('active');
+    }
     
     // 更新頁面標題
     const titles = {
+        'dashboard': '數據儀表板',
+        'users-center': '用戶管理中心',
+        'content-center': '內容管理中心',
+        'business-center': '商業管理中心',
+        'system-center': '系統維護中心',
+        'admin-settings': '系統設定',
+        // 向後兼容舊的section名稱
         'overview': '數據概覽',
         'users': '用戶管理',
         'modes': '模式分析',
@@ -608,24 +791,66 @@ function switchSection(section) {
         'orders': '購買記錄',
         'referrals': '推薦＆獎勵',
         'order-cleanup-logs': '訂單清理日誌',
-        // 'generations': '生成記錄', // 已隱藏
         'analytics': '數據分析',
-        'admin-settings': '管理員設定'
+        'usage-statistics': '使用統計',
+        'llm-keys': 'LLM Key 綁定'
     };
-    document.getElementById('page-title').textContent = titles[section];
+    const titleElement = document.getElementById('page-title');
+    if (titleElement) {
+        titleElement.textContent = titles[section] || '管理後台';
+    }
     
     // 顯示對應區塊
     document.querySelectorAll('.section').forEach(sec => {
         sec.classList.remove('active');
     });
-    document.getElementById(section).classList.add('active');
+    const sectionElement = document.getElementById(section);
+    if (sectionElement) {
+        sectionElement.classList.add('active');
+    }
     
-    // 載入對應數據
-    loadSectionData(section);
+    // 如果有指定標籤頁，切換到該標籤頁
+    if (tabId) {
+        const tabsContainer = sectionElement?.querySelector('.tabs-container');
+        if (tabsContainer) {
+            switchTab(tabsContainer, tabId);
+        }
+    } else {
+        // 載入對應數據
+        loadSectionData(section);
+    }
+}
+
+// 切換到指定區塊和標籤頁（供快速操作使用）
+function switchToSection(section, tabId = null) {
+    switchSection(section, tabId);
 }
 
 function loadSectionData(section) {
     switch(section) {
+        case 'dashboard':
+            loadDashboard();
+            break;
+        case 'users-center':
+            // 用戶管理中心：載入第一個標籤頁的數據
+            loadUsers();
+            break;
+        case 'content-center':
+            // 內容管理中心：載入第一個標籤頁的數據
+            loadScripts();
+            break;
+        case 'business-center':
+            // 商業管理中心：載入第一個標籤頁的數據
+            loadOrders();
+            break;
+        case 'system-center':
+            // 系統維護中心：載入第一個標籤頁的數據
+            loadOrderCleanupLogs();
+            break;
+        case 'admin-settings':
+            loadAdminSettings();
+            break;
+        // 向後兼容舊的section名稱
         case 'overview':
             loadOverview();
             break;
@@ -659,20 +884,14 @@ function loadSectionData(section) {
         case 'license-activations':
             loadLicenseActivations();
             break;
-        // case 'generations': // 已隱藏
-        //     loadGenerations();
-        //     break;
         case 'analytics':
             loadAnalytics();
             break;
-            case 'usage-statistics':
-                loadUsageStatistics();
-                break;
-            case 'llm-keys':
-                loadLlmKeysStatus();
-                break;
-        case 'admin-settings':
-            loadAdminSettings();
+        case 'usage-statistics':
+            loadUsageStatistics();
+            break;
+        case 'llm-keys':
+            loadLlmKeysStatus();
             break;
     }
 }
@@ -733,25 +952,197 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// ===== 數據概覽 =====
-async function loadOverview() {
+// ===== 統一儀表板 =====
+async function loadDashboard() {
     try {
         // 載入統計數據
         const statsResponse = await adminFetch(`${API_BASE_URL}/admin/statistics`);
         const stats = await statsResponse.json();
         
-        document.getElementById('total-users').textContent = stats.total_users || 0;
-        document.getElementById('total-conversations').textContent = stats.total_conversations || 0;
-        document.getElementById('total-scripts').textContent = stats.total_scripts || 0;
-        document.getElementById('total-positioning').textContent = stats.total_positioning || 0;
+        // 更新儀表板核心指標
+        document.getElementById('dashboard-total-users').textContent = stats.total_users || 0;
+        document.getElementById('dashboard-total-conversations').textContent = stats.total_conversations || 0;
+        document.getElementById('dashboard-total-scripts').textContent = stats.total_scripts || 0;
+        
+        // 計算營收（如果有訂單數據）
+        try {
+            const ordersResponse = await adminFetch(`${API_BASE_URL}/admin/orders`);
+            const ordersData = await ordersResponse.json();
+            const orders = ordersData.orders || [];
+            const monthlyRevenue = orders
+                .filter(o => o.payment_status === 'paid' && o.paid_at) {
+                    const paidDate = new Date(o.paid_at);
+                    const now = new Date();
+                    return paidDate.getMonth() === now.getMonth() && 
+                           paidDate.getFullYear() === now.getFullYear();
+                })
+                .reduce((sum, o) => sum + (o.amount || 0), 0);
+            document.getElementById('dashboard-total-revenue').textContent = `NT$ ${monthlyRevenue.toLocaleString()}`;
+        } catch (e) {
+            document.getElementById('dashboard-total-revenue').textContent = 'NT$ 0';
+        }
         
         // 載入圖表數據
-        loadCharts(stats);
-        loadRecentActivities();
+        loadDashboardOverviewCharts(stats);
+        loadDashboardRecentActivities();
+        
+        // 更新快速操作區的統計數據
+        updateQuickActionsStats(stats);
     } catch (error) {
-        console.error('載入概覽數據失敗:', error);
+        console.error('載入儀表板數據失敗:', error);
         showToast('載入數據失敗', 'error');
     }
+}
+
+// 刷新儀表板
+async function refreshDashboard() {
+    await loadDashboard();
+    showToast('儀表板已重新整理', 'success');
+}
+
+// 更新快速操作區統計
+function updateQuickActionsStats(stats) {
+    // 這裡可以添加邏輯來更新快速操作卡片上的統計數據
+    // 例如：新用戶數、新腳本數、待處理訂單數等
+}
+
+// 載入儀表板概覽圖表
+async function loadDashboardOverviewCharts(stats = null) {
+    try {
+        if (!stats) {
+            const statsResponse = await adminFetch(`${API_BASE_URL}/admin/statistics`);
+            stats = await statsResponse.json();
+        }
+        
+        // 載入模式統計
+        const modeResponse = await adminFetch(`${API_BASE_URL}/admin/mode-statistics`);
+        const modeData = await modeResponse.json();
+        
+        // 用戶增長趨勢圖
+        if (charts.dashboardUserGrowth) charts.dashboardUserGrowth.destroy();
+        const userGrowthCtx = document.getElementById('dashboard-user-growth-chart');
+        if (userGrowthCtx) {
+            charts.dashboardUserGrowth = new Chart(userGrowthCtx, {
+                type: 'line',
+                data: {
+                    labels: ['週一', '週二', '週三', '週四', '週五', '週六', '週日'],
+                    datasets: [{
+                        label: '新增用戶',
+                        data: [0, 0, 0, 0, 0, 0, stats?.today_users || 0],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: window.innerWidth <= 768 ? 1.5 : 2,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 模式使用分布圖
+        if (charts.dashboardModeDistribution) charts.dashboardModeDistribution.destroy();
+        const modeDistributionCtx = document.getElementById('dashboard-mode-distribution-chart');
+        if (modeDistributionCtx) {
+            const modeStats = modeData.mode_stats || {};
+            charts.dashboardModeDistribution = new Chart(modeDistributionCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['一鍵生成', 'AI顧問', 'IP人設規劃'],
+                    datasets: [{
+                        data: [
+                            modeStats.mode1_quick_generate?.count || 0,
+                            modeStats.mode2_ai_consultant?.count || 0,
+                            modeStats.mode3_ip_planning?.count || 0
+                        ],
+                        backgroundColor: [
+                            '#3b82f6',
+                            '#8b5cf6',
+                            '#f59e0b'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: window.innerWidth <= 768 ? 1.5 : 2
+                }
+            });
+        }
+    } catch (error) {
+        console.error('載入儀表板圖表失敗:', error);
+    }
+}
+
+// 載入儀表板用戶分析圖表
+async function loadDashboardUsersCharts() {
+    // 實現用戶分析相關圖表
+}
+
+// 載入儀表板內容分析圖表
+async function loadDashboardContentCharts() {
+    // 實現內容分析相關圖表
+}
+
+// 載入儀表板商業分析圖表
+async function loadDashboardBusinessCharts() {
+    // 實現商業分析相關圖表
+}
+
+// 載入儀表板最近活動
+async function loadDashboardRecentActivities() {
+    try {
+        const response = await adminFetch(`${API_BASE_URL}/admin/user-activities`);
+        const data = await response.json();
+        const activities = data.activities || [];
+        
+        const activitiesContainer = document.getElementById('dashboard-recent-activities');
+        if (!activitiesContainer) return;
+        
+        if (activities.length > 0) {
+            activitiesContainer.innerHTML = activities.slice(0, 10).map(activity => {
+                const timeAgo = calculateTimeAgo(activity.time);
+                return `
+                    <div class="activity-item">
+                        <div class="activity-icon">${activity.icon}</div>
+                        <div>
+                            <strong>${activity.type}</strong>
+                            <p style="margin: 0; font-size: 0.875rem; color: #64748b;">
+                                ${activity.title || activity.name || ''} - ${timeAgo}
+                            </p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } else {
+            activitiesContainer.innerHTML = '<div class="empty-state" style="text-align: center; color: #64748b;">暫無活動記錄</div>';
+        }
+    } catch (error) {
+        console.error('載入儀表板活動失敗:', error);
+        const activitiesContainer = document.getElementById('dashboard-recent-activities');
+        if (activitiesContainer) {
+            activitiesContainer.innerHTML = '<div class="empty-state" style="text-align: center; color: #64748b;">載入活動失敗</div>';
+        }
+    }
+}
+
+// 改變時間範圍（儀表板）
+function changeTimeRange(range) {
+    // 實現時間範圍切換邏輯
+    loadDashboard();
+}
+
+// ===== 數據概覽（向後兼容） =====
+async function loadOverview() {
+    // 向後兼容舊的概覽頁面，直接調用儀表板
+    await loadDashboard();
 }
 
 async function loadCharts(stats) {
@@ -3016,6 +3407,11 @@ function updateSubscribeUI(userId, isSubscribed) {
 }
 
 // ===== CSV 匯出功能 =====
+async function exportData(type) {
+    // 統一匯出函數，映射到 exportCSV
+    return await exportCSV(type);
+}
+
 async function exportCSV(type) {
     try {
         const response = await adminFetch(`${API_BASE_URL}/admin/export/${type}`);
