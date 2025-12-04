@@ -4,6 +4,21 @@ const API_BASE_URL = 'https://api.aijob.com.tw/api';
 // 全域變數
 let charts = {};
 
+// 全局函數定義（確保在頁面載入時即可使用）
+window.switchToSection = function(section, tabId = null) {
+    // 延遲到 DOM 載入完成後執行
+    if (typeof switchSection === 'function') {
+        switchSection(section, tabId);
+    } else {
+        console.warn('switchSection 函數尚未定義，稍後重試');
+        setTimeout(() => {
+            if (typeof switchSection === 'function') {
+                switchSection(section, tabId);
+            }
+        }, 100);
+    }
+};
+
 // ===== CSRF Token 管理 =====
 let csrfTokenCache = null;
 
@@ -822,9 +837,10 @@ function switchSection(section, tabId = null) {
 }
 
 // 切換到指定區塊和標籤頁（供快速操作使用）
-function switchToSection(section, tabId = null) {
+// 確保函數在全局作用域中可用
+window.switchToSection = function(section, tabId = null) {
     switchSection(section, tabId);
-}
+};
 
 function loadSectionData(section) {
     switch(section) {
@@ -852,7 +868,8 @@ function loadSectionData(section) {
             break;
         // 向後兼容舊的section名稱
         case 'overview':
-            loadOverview();
+            // 向後兼容：如果訪問舊的 overview，重定向到 dashboard
+            loadDashboard();
             break;
         case 'users':
             loadUsers();
@@ -959,27 +976,44 @@ async function loadDashboard() {
         const statsResponse = await adminFetch(`${API_BASE_URL}/admin/statistics`);
         const stats = await statsResponse.json();
         
-        // 更新儀表板核心指標
-        document.getElementById('dashboard-total-users').textContent = stats.total_users || 0;
-        document.getElementById('dashboard-total-conversations').textContent = stats.total_conversations || 0;
-        document.getElementById('dashboard-total-scripts').textContent = stats.total_scripts || 0;
+        // 更新儀表板核心指標（添加空值檢查）
+        const dashboardUsersEl = document.getElementById('dashboard-total-users');
+        const dashboardConversationsEl = document.getElementById('dashboard-total-conversations');
+        const dashboardScriptsEl = document.getElementById('dashboard-total-scripts');
+        const dashboardRevenueEl = document.getElementById('dashboard-total-revenue');
+        
+        if (dashboardUsersEl) {
+            dashboardUsersEl.textContent = stats.total_users || 0;
+        }
+        
+        if (dashboardConversationsEl) {
+            dashboardConversationsEl.textContent = stats.total_conversations || 0;
+        }
+        
+        if (dashboardScriptsEl) {
+            dashboardScriptsEl.textContent = stats.total_scripts || 0;
+        }
         
         // 計算營收（如果有訂單數據）
-        try {
-            const ordersResponse = await adminFetch(`${API_BASE_URL}/admin/orders`);
-            const ordersData = await ordersResponse.json();
-            const orders = ordersData.orders || [];
-            const monthlyRevenue = orders
-                .filter(o => o.payment_status === 'paid' && o.paid_at) {
-                    const paidDate = new Date(o.paid_at);
-                    const now = new Date();
-                    return paidDate.getMonth() === now.getMonth() && 
-                           paidDate.getFullYear() === now.getFullYear();
-                })
-                .reduce((sum, o) => sum + (o.amount || 0), 0);
-            document.getElementById('dashboard-total-revenue').textContent = `NT$ ${monthlyRevenue.toLocaleString()}`;
-        } catch (e) {
-            document.getElementById('dashboard-total-revenue').textContent = 'NT$ 0';
+        if (dashboardRevenueEl) {
+            try {
+                const ordersResponse = await adminFetch(`${API_BASE_URL}/admin/orders`);
+                const ordersData = await ordersResponse.json();
+                const orders = ordersData.orders || [];
+                const now = new Date();
+                const monthlyRevenue = orders
+                    .filter(o => {
+                        if (o.payment_status !== 'paid' || !o.paid_at) return false;
+                        const paidDate = new Date(o.paid_at);
+                        return paidDate.getMonth() === now.getMonth() && 
+                               paidDate.getFullYear() === now.getFullYear();
+                    })
+                    .reduce((sum, o) => sum + (o.amount || 0), 0);
+                dashboardRevenueEl.textContent = `NT$ ${monthlyRevenue.toLocaleString()}`;
+            } catch (e) {
+                console.error('計算營收失敗:', e);
+                dashboardRevenueEl.textContent = 'NT$ 0';
+            }
         }
         
         // 載入圖表數據
