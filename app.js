@@ -2225,8 +2225,7 @@ async function loadConversations() {
         }
         
         // 根本修复：查找正确的 actions 容器
-        // 对话记录在 #tab-conversations-list 标签页内
-        const tabPanel = document.getElementById('tab-conversations-list');
+        // 对话记录在 #tab-conversations-list 标签页内（tabPanel 已在函数开头声明）
         let actionsDiv = null;
         if (tabPanel) {
             // 查找或创建 section-actions 容器
@@ -2256,10 +2255,6 @@ async function loadConversations() {
             paginationDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-right: 12px;';
             
             if (data.pagination && data.pagination.total_pages > 1) {
-                const paginationDiv = document.createElement('div');
-                paginationDiv.className = 'pagination-controls';
-                paginationDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-right: 12px;';
-                
                 const pageInfo = document.createElement('span');
                 pageInfo.style.cssText = 'color: #64748b; font-size: 0.9em; margin-right: 8px;';
                 pageInfo.textContent = `第 ${data.pagination.page} / ${data.pagination.total_pages} 頁（共 ${data.pagination.total} 筆）`;
