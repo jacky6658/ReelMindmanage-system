@@ -1692,41 +1692,43 @@ async function loadUsers(page = 1) {
                 existingPagination.remove();
             }
             
-            // 添加分頁控制（如果有分頁資訊）
-            if (data.total_pages && data.total_pages > 1) {
-                const paginationDiv = document.createElement('div');
-                paginationDiv.className = 'pagination-controls';
-                paginationDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-right: 12px;';
-                
-                const pageInfo = document.createElement('span');
-                pageInfo.style.cssText = 'color: #64748b; font-size: 0.9em; margin-right: 8px;';
-                pageInfo.textContent = `第 ${data.current_page} / ${data.total_pages} 頁（共 ${data.total_users} 筆）`;
-                
-                const prevBtn = document.createElement('button');
-                prevBtn.className = 'btn btn-secondary';
-                prevBtn.innerHTML = '← 上一頁';
-                prevBtn.disabled = data.current_page <= 1;
-                prevBtn.onclick = () => {
-                    if (data.current_page > 1) {
-                        loadUsers(data.current_page - 1);
-                    }
-                };
-                
-                const nextBtn = document.createElement('button');
-                nextBtn.className = 'btn btn-secondary';
-                nextBtn.innerHTML = '下一頁 →';
-                nextBtn.disabled = data.current_page >= data.total_pages;
-                nextBtn.onclick = () => {
-                    if (data.current_page < data.total_pages) {
-                        loadUsers(data.current_page + 1);
-                    }
-                };
-                
-                paginationDiv.appendChild(pageInfo);
-                paginationDiv.appendChild(prevBtn);
-                paginationDiv.appendChild(nextBtn);
-                actionsDiv.insertBefore(paginationDiv, actionsDiv.firstChild);
-            }
+            // 根本修复：始终显示分页控制（即使只有一页，也显示当前页信息）
+            const paginationDiv = document.createElement('div');
+            paginationDiv.className = 'pagination-controls';
+            paginationDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-right: 12px;';
+            
+            const currentPage = data.current_page || page || 1;
+            const totalPages = data.total_pages || 1;
+            const totalUsers = data.total_users || (data.users ? data.users.length : 0);
+            
+            const pageInfo = document.createElement('span');
+            pageInfo.style.cssText = 'color: #64748b; font-size: 0.9em; margin-right: 8px;';
+            pageInfo.textContent = `第 ${currentPage} / ${totalPages} 頁（共 ${totalUsers} 筆）`;
+            
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'btn btn-secondary';
+            prevBtn.innerHTML = '← 上一頁';
+            prevBtn.disabled = currentPage <= 1 || totalPages <= 1;
+            prevBtn.onclick = () => {
+                if (currentPage > 1) {
+                    loadUsers(currentPage - 1);
+                }
+            };
+            
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'btn btn-secondary';
+            nextBtn.innerHTML = '下一頁 →';
+            nextBtn.disabled = currentPage >= totalPages || totalPages <= 1;
+            nextBtn.onclick = () => {
+                if (currentPage < totalPages) {
+                    loadUsers(currentPage + 1);
+                }
+            };
+            
+            paginationDiv.appendChild(pageInfo);
+            paginationDiv.appendChild(prevBtn);
+            paginationDiv.appendChild(nextBtn);
+            actionsDiv.insertBefore(paginationDiv, actionsDiv.firstChild);
             
             // 添加匯出按鈕
             let exportBtn = actionsDiv.querySelector('.btn-export');
@@ -2113,11 +2115,19 @@ async function loadConversations() {
     try {
         const filter = document.getElementById('conversation-filter').value;
         
-        // 檢測是否為手機版
+        // 根本修复：查找正确的容器元素
+        // 对话记录在 #tab-conversations-list 标签页内
+        const tabPanel = document.getElementById('tab-conversations-list');
+        if (!tabPanel) {
+            console.error('[conversations] tab panel missing');
+            return;
+        }
+        
+        // 检测是否为手机版
         const isMobile = window.innerWidth <= 768;
-        const tableContainer = await waitFor('#conversations .table-container', 8000).catch(() => null);
+        const tableContainer = tabPanel.querySelector('.table-container');
         if (!tableContainer) {
-            console.warn('[conversations] container missing');
+            console.error('[conversations] table-container missing in tab panel');
             return;
         }
         
@@ -2214,8 +2224,25 @@ async function loadConversations() {
             }).join(''));
         }
         
-        // 添加分頁控制和匯出按鈕
-        const actionsDiv = document.querySelector('#conversations .section-actions');
+        // 根本修复：查找正确的 actions 容器
+        // 对话记录在 #tab-conversations-list 标签页内
+        const tabPanel = document.getElementById('tab-conversations-list');
+        let actionsDiv = null;
+        if (tabPanel) {
+            // 查找或创建 section-actions 容器
+            actionsDiv = tabPanel.querySelector('.section-actions');
+            if (!actionsDiv) {
+                // 如果没有，在 panel-header 后创建
+                const panelHeader = tabPanel.querySelector('.panel-header');
+                if (panelHeader) {
+                    actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'section-actions';
+                    actionsDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;';
+                    panelHeader.appendChild(actionsDiv);
+                }
+            }
+        }
+        
         if (actionsDiv) {
             // 清除現有分頁按鈕
             const existingPagination = actionsDiv.querySelector('.pagination-controls');
@@ -2223,7 +2250,11 @@ async function loadConversations() {
                 existingPagination.remove();
             }
             
-            // 添加分頁控制（如果有分頁資訊）
+            // 根本修复：始终显示分页控制（即使只有一页）
+            const paginationDiv = document.createElement('div');
+            paginationDiv.className = 'pagination-controls';
+            paginationDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-right: 12px;';
+            
             if (data.pagination && data.pagination.total_pages > 1) {
                 const paginationDiv = document.createElement('div');
                 paginationDiv.className = 'pagination-controls';
@@ -2256,8 +2287,16 @@ async function loadConversations() {
                 paginationDiv.appendChild(pageInfo);
                 paginationDiv.appendChild(prevBtn);
                 paginationDiv.appendChild(nextBtn);
-                actionsDiv.insertBefore(paginationDiv, actionsDiv.firstChild);
+            } else {
+                // 即使只有一页，也显示分页信息
+                const pageInfo = document.createElement('span');
+                pageInfo.style.cssText = 'color: #64748b; font-size: 0.9em; margin-right: 8px;';
+                const total = data.pagination ? data.pagination.total : (allConversations ? allConversations.length : 0);
+                pageInfo.textContent = `共 ${total} 筆`;
+                paginationDiv.appendChild(pageInfo);
             }
+            
+            actionsDiv.insertBefore(paginationDiv, actionsDiv.firstChild);
             
             // 添加匯出按鈕
             let exportBtn = actionsDiv.querySelector('.btn-export');
@@ -2272,12 +2311,20 @@ async function loadConversations() {
     } catch (error) {
         console.error('載入對話記錄失敗:', error);
         showToast('載入對話記錄失敗', 'error');
+        
+        // 根本修复：查找正确的容器元素
+        const tabPanel = document.getElementById('tab-conversations-list');
+        if (!tabPanel) {
+            console.error('[conversations] tab panel missing in error handler');
+            return;
+        }
+        
         const isMobile = window.innerWidth <= 768;
-        const tableContainer = document.querySelector('#conversations .table-container');
+        const tableContainer = tabPanel.querySelector('.table-container');
         if (isMobile) {
             if (tableContainer) tableContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">載入失敗</div>';
         } else {
-            const tbody = document.querySelector('#conversations-table-body');
+            const tbody = document.getElementById('conversations-table-body');
             if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 2rem;">載入失敗</td></tr>';
         }
     }
