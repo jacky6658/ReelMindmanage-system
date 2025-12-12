@@ -1571,6 +1571,9 @@ let currentUsersPage = 1;
 const usersPageSize = 20;
 
 async function loadUsers(page = 1) {
+    // 根本修复：在函数开头声明 tabPanel，避免重复声明和作用域问题
+    const tabPanel = document.getElementById('tab-users-list');
+    
     try {
         currentUsersPage = page;
         const response = await adminFetch(`${API_BASE_URL}/admin/users?page=${page}&page_size=${usersPageSize}`);
@@ -1578,7 +1581,8 @@ async function loadUsers(page = 1) {
         
         // 檢測是否為手機版
         const isMobile = window.innerWidth <= 768;
-        let tableContainer = document.querySelector('#users .table-container');
+        // 修复：使用 tabPanel 查找 table-container
+        let tableContainer = tabPanel ? tabPanel.querySelector('.table-container') : document.querySelector('#users .table-container');
         
         if (isMobile) {
             // 手機版：卡片式佈局
@@ -1674,8 +1678,7 @@ async function loadUsers(page = 1) {
         }
         
         // 添加分頁控制
-        // 根本修复：用户列表在 #tab-users-list 标签页内，不是 #users section
-        const tabPanel = document.getElementById('tab-users-list');
+        // 根本修复：使用已在函数开头声明的 tabPanel
         let actionsDiv = null;
         
         if (tabPanel) {
@@ -1733,6 +1736,7 @@ async function loadUsers(page = 1) {
             }
             
             const prevBtn = document.createElement('button');
+            prevBtn.type = 'button'; // 明确指定 button 类型，避免表单提交
             prevBtn.className = 'btn btn-secondary';
             prevBtn.innerHTML = '← 上一頁';
             prevBtn.disabled = currentPage <= 1 || totalPages <= 1;
@@ -1743,8 +1747,18 @@ async function loadUsers(page = 1) {
             };
             
             // 添加页码输入框（用于快速跳转）
+            // 根本修复：添加唯一 id 和 label，避免重复 id 和可访问性问题
+            const pageInputId = 'user-page-input-' + Date.now(); // 使用时间戳确保唯一性
+            const pageInputLabel = document.createElement('label');
+            pageInputLabel.setAttribute('for', pageInputId);
+            pageInputLabel.style.cssText = 'display: none;'; // 视觉隐藏但保留给屏幕阅读器
+            pageInputLabel.textContent = '跳转到页码';
+            
             const pageInput = document.createElement('input');
             pageInput.type = 'number';
+            pageInput.id = pageInputId; // 添加唯一 id
+            pageInput.name = 'user-page-input'; // 添加 name 属性
+            pageInput.setAttribute('aria-label', '跳转到页码'); // 添加 aria-label 用于可访问性
             pageInput.min = 1;
             pageInput.max = totalPages;
             pageInput.value = currentPage;
@@ -1764,6 +1778,8 @@ async function loadUsers(page = 1) {
             const goToBtn = document.createElement('button');
             goToBtn.className = 'btn btn-secondary';
             goToBtn.innerHTML = '跳轉';
+            goToBtn.type = 'button'; // 明确指定 button 类型
+            goToBtn.setAttribute('aria-label', '跳转到指定页码');
             goToBtn.style.cssText = 'padding: 4px 12px; font-size: 0.9em;';
             goToBtn.onclick = () => {
                 const targetPage = parseInt(pageInput.value);
@@ -1775,10 +1791,15 @@ async function loadUsers(page = 1) {
                 }
             };
             
+            // 将 label 添加到分页控件中
+            paginationDiv.appendChild(pageInputLabel);
+            
             // 添加"第一页"和"最后一页"按钮
             const firstBtn = document.createElement('button');
+            firstBtn.type = 'button'; // 明确指定 button 类型
             firstBtn.className = 'btn btn-secondary';
             firstBtn.innerHTML = '⏮ 首頁';
+            firstBtn.setAttribute('aria-label', '跳转到第一页');
             firstBtn.disabled = currentPage <= 1 || totalPages <= 1;
             firstBtn.onclick = () => {
                 if (currentPage > 1) {
@@ -1787,8 +1808,10 @@ async function loadUsers(page = 1) {
             };
             
             const lastBtn = document.createElement('button');
+            lastBtn.type = 'button'; // 明确指定 button 类型
             lastBtn.className = 'btn btn-secondary';
             lastBtn.innerHTML = '末頁 ⏭';
+            lastBtn.setAttribute('aria-label', '跳转到最后一页');
             lastBtn.disabled = currentPage >= totalPages || totalPages <= 1;
             lastBtn.onclick = () => {
                 if (currentPage < totalPages) {
@@ -1797,8 +1820,10 @@ async function loadUsers(page = 1) {
             };
             
             const nextBtn = document.createElement('button');
+            nextBtn.type = 'button'; // 明确指定 button 类型
             nextBtn.className = 'btn btn-secondary';
             nextBtn.innerHTML = '下一頁 →';
+            nextBtn.setAttribute('aria-label', '跳转到下一页');
             nextBtn.disabled = currentPage >= totalPages || totalPages <= 1;
             nextBtn.onclick = () => {
                 if (currentPage < totalPages) {
