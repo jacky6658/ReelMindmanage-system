@@ -1674,14 +1674,32 @@ async function loadUsers(page = 1) {
         }
         
         // 添加分頁控制
-        let actionsDiv = document.querySelector('#users .section-actions');
-        if (!actionsDiv) {
-            const sectionHeader = document.querySelector('#users .section-header');
-            if (sectionHeader) {
-                const newActionsDiv = document.createElement('div');
-                newActionsDiv.className = 'section-actions';
-                sectionHeader.appendChild(newActionsDiv);
-                actionsDiv = newActionsDiv;
+        // 根本修复：用户列表在 #tab-users-list 标签页内，不是 #users section
+        const tabPanel = document.getElementById('tab-users-list');
+        let actionsDiv = null;
+        
+        if (tabPanel) {
+            // 先查找是否已有 section-actions
+            actionsDiv = tabPanel.querySelector('.section-actions');
+            if (!actionsDiv) {
+                // 如果没有，在 panel-header 后创建
+                const panelHeader = tabPanel.querySelector('.panel-header');
+                if (panelHeader) {
+                    actionsDiv = document.createElement('div');
+                    actionsDiv.className = 'section-actions';
+                    actionsDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0 16px;';
+                    // 插入到 panel-header 之后
+                    panelHeader.insertAdjacentElement('afterend', actionsDiv);
+                } else {
+                    // 如果连 panel-header 都没有，在 table-container 之前创建
+                    const tableContainer = tabPanel.querySelector('.table-container');
+                    if (tableContainer) {
+                        actionsDiv = document.createElement('div');
+                        actionsDiv.className = 'section-actions';
+                        actionsDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0 16px;';
+                        tableContainer.insertAdjacentElement('beforebegin', actionsDiv);
+                    }
+                }
             }
         }
         
