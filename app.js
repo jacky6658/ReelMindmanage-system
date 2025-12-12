@@ -1692,18 +1692,27 @@ async function loadUsers(page = 1) {
                 existingPagination.remove();
             }
             
-            // 根本修复：始终显示分页控制（即使只有一页，也显示当前页信息）
+            // 根本修复：改进分页显示，添加跳转功能和更明显的提示
             const paginationDiv = document.createElement('div');
             paginationDiv.className = 'pagination-controls';
-            paginationDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-right: 12px;';
+            paginationDiv.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-right: 12px; flex-wrap: wrap;';
             
             const currentPage = data.current_page || page || 1;
             const totalPages = data.total_pages || 1;
             const totalUsers = data.total_users || (data.users ? data.users.length : 0);
             
+            // 显示更明显的分页信息（包括总用户数提示）
             const pageInfo = document.createElement('span');
-            pageInfo.style.cssText = 'color: #64748b; font-size: 0.9em; margin-right: 8px;';
-            pageInfo.textContent = `第 ${currentPage} / ${totalPages} 頁（共 ${totalUsers} 筆）`;
+            pageInfo.style.cssText = 'color: #1e293b; font-size: 0.95em; font-weight: 500; margin-right: 12px; padding: 4px 8px; background: #f1f5f9; border-radius: 4px;';
+            pageInfo.textContent = `第 ${currentPage} / ${totalPages} 頁 | 共 ${totalUsers} 位用戶 | 本頁顯示 ${data.users.length} 位`;
+            
+            // 如果有多页，显示提示
+            if (totalPages > 1) {
+                const hint = document.createElement('span');
+                hint.style.cssText = 'color: #f59e0b; font-size: 0.85em; margin-right: 8px;';
+                hint.textContent = `💡 提示：最早註冊的用戶在第 ${totalPages} 頁`;
+                paginationDiv.appendChild(hint);
+            }
             
             const prevBtn = document.createElement('button');
             prevBtn.className = 'btn btn-secondary';
@@ -1712,6 +1721,60 @@ async function loadUsers(page = 1) {
             prevBtn.onclick = () => {
                 if (currentPage > 1) {
                     loadUsers(currentPage - 1);
+                }
+            };
+            
+            // 添加页码输入框（用于快速跳转）
+            const pageInput = document.createElement('input');
+            pageInput.type = 'number';
+            pageInput.min = 1;
+            pageInput.max = totalPages;
+            pageInput.value = currentPage;
+            pageInput.style.cssText = 'width: 60px; padding: 4px 8px; border: 1px solid #cbd5e1; border-radius: 4px; text-align: center;';
+            pageInput.onkeypress = (e) => {
+                if (e.key === 'Enter') {
+                    const targetPage = parseInt(pageInput.value);
+                    if (targetPage >= 1 && targetPage <= totalPages) {
+                        loadUsers(targetPage);
+                    } else {
+                        showToast(`請輸入 1 到 ${totalPages} 之間的頁碼`, 'error');
+                        pageInput.value = currentPage;
+                    }
+                }
+            };
+            
+            const goToBtn = document.createElement('button');
+            goToBtn.className = 'btn btn-secondary';
+            goToBtn.innerHTML = '跳轉';
+            goToBtn.style.cssText = 'padding: 4px 12px; font-size: 0.9em;';
+            goToBtn.onclick = () => {
+                const targetPage = parseInt(pageInput.value);
+                if (targetPage >= 1 && targetPage <= totalPages) {
+                    loadUsers(targetPage);
+                } else {
+                    showToast(`請輸入 1 到 ${totalPages} 之間的頁碼`, 'error');
+                    pageInput.value = currentPage;
+                }
+            };
+            
+            // 添加"第一页"和"最后一页"按钮
+            const firstBtn = document.createElement('button');
+            firstBtn.className = 'btn btn-secondary';
+            firstBtn.innerHTML = '⏮ 首頁';
+            firstBtn.disabled = currentPage <= 1 || totalPages <= 1;
+            firstBtn.onclick = () => {
+                if (currentPage > 1) {
+                    loadUsers(1);
+                }
+            };
+            
+            const lastBtn = document.createElement('button');
+            lastBtn.className = 'btn btn-secondary';
+            lastBtn.innerHTML = '末頁 ⏭';
+            lastBtn.disabled = currentPage >= totalPages || totalPages <= 1;
+            lastBtn.onclick = () => {
+                if (currentPage < totalPages) {
+                    loadUsers(totalPages);
                 }
             };
             
@@ -1726,8 +1789,12 @@ async function loadUsers(page = 1) {
             };
             
             paginationDiv.appendChild(pageInfo);
+            paginationDiv.appendChild(firstBtn);
             paginationDiv.appendChild(prevBtn);
+            paginationDiv.appendChild(pageInput);
+            paginationDiv.appendChild(goToBtn);
             paginationDiv.appendChild(nextBtn);
+            paginationDiv.appendChild(lastBtn);
             actionsDiv.insertBefore(paginationDiv, actionsDiv.firstChild);
             
             // 添加匯出按鈕
