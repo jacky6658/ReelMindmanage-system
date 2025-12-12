@@ -3923,8 +3923,11 @@ async function exportCSV(type) {
 // ===== 使用統計 =====
 async function loadUsageStatistics() {
     try {
-        const startDate = document.getElementById('usage-start-date')?.value || null;
-        const endDate = document.getElementById('usage-end-date')?.value || null;
+        // 根本修复：支持两个不同位置的日期输入框（标签页和独立页面）
+        const startDateInput = document.getElementById('usage-start-date') || document.getElementById('tab-usage-start-date');
+        const endDateInput = document.getElementById('usage-end-date') || document.getElementById('tab-usage-end-date');
+        const startDate = startDateInput?.value || null;
+        const endDate = endDateInput?.value || null;
         
         let url = `${API_BASE_URL}/admin/usage-statistics`;
         const params = new URLSearchParams();

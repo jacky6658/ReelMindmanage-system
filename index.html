@@ -1286,9 +1286,11 @@
                         <div class="tab-panel" id="tab-usage-stats">
                             <div class="panel-header">
                     <div class="filters">
-                                    <input type="date" id="usage-start-date" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; margin-right: 8px;">
-                                    <input type="date" id="usage-end-date" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; margin-right: 8px;">
-                                    <button onclick="loadUsageStatistics()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">查詢</button>
+                                    <label for="tab-usage-start-date" style="display: none;">開始日期</label>
+                                    <input type="date" id="tab-usage-start-date" name="tab-usage-start-date" aria-label="開始日期" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; margin-right: 8px;">
+                                    <label for="tab-usage-end-date" style="display: none;">結束日期</label>
+                                    <input type="date" id="tab-usage-end-date" name="tab-usage-end-date" aria-label="結束日期" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; margin-right: 8px;">
+                                    <button type="button" onclick="loadUsageStatistics()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">查詢</button>
                     </div>
                                 <div class="stats-grid">
                                     <div class="stat-card">
@@ -1653,9 +1655,11 @@
                 <div class="section-header">
                     <h2>使用統計</h2>
                     <div class="section-actions">
-                        <input type="date" id="usage-start-date" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; margin-right: 8px;">
-                        <input type="date" id="usage-end-date" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; margin-right: 8px;">
-                        <button onclick="loadUsageStatistics()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">查詢</button>
+                        <label for="usage-start-date" style="display: none;">開始日期</label>
+                        <input type="date" id="usage-start-date" name="usage-start-date" aria-label="開始日期" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; margin-right: 8px;">
+                        <label for="usage-end-date" style="display: none;">結束日期</label>
+                        <input type="date" id="usage-end-date" name="usage-end-date" aria-label="結束日期" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; margin-right: 8px;">
+                        <button type="button" onclick="loadUsageStatistics()" style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;">查詢</button>
                     </div>
                 </div>
                 <div class="stats-grid" style="margin-bottom: 24px;">
