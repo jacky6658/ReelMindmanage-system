@@ -2112,16 +2112,15 @@ async function loadModes() {
 
 // ===== 對話記錄 =====
 async function loadConversations() {
+    // 根本修复：在函数开头声明 tabPanel，避免重复声明
+    const tabPanel = document.getElementById('tab-conversations-list');
+    if (!tabPanel) {
+        console.error('[conversations] tab panel missing');
+        return;
+    }
+    
     try {
         const filter = document.getElementById('conversation-filter').value;
-        
-        // 根本修复：查找正确的容器元素
-        // 对话记录在 #tab-conversations-list 标签页内
-        const tabPanel = document.getElementById('tab-conversations-list');
-        if (!tabPanel) {
-            console.error('[conversations] tab panel missing');
-            return;
-        }
         
         // 检测是否为手机版
         const isMobile = window.innerWidth <= 768;
@@ -2307,8 +2306,7 @@ async function loadConversations() {
         console.error('載入對話記錄失敗:', error);
         showToast('載入對話記錄失敗', 'error');
         
-        // 根本修复：查找正确的容器元素
-        const tabPanel = document.getElementById('tab-conversations-list');
+        // 根本修复：使用已在函数开头声明的 tabPanel
         if (!tabPanel) {
             console.error('[conversations] tab panel missing in error handler');
             return;
