@@ -1946,9 +1946,16 @@ async function viewUser(userId) {
         const hasLlmKey = userData.user_info?.has_llm_key || false;
         if (hasLlmKey && llmKeys.length > 0) {
             content += `<div style="margin-top: 16px; padding: 12px; background: #f0fdf4; border-radius: 8px;">`;
-            content += `<h4 style="margin-bottom: 8px;">🔑 LLM Key 綁定資訊</h4>`;
+            content += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">`;
+            content += `<h4 style="margin: 0;">🔑 LLM Key 綁定資訊</h4>`;
+            content += `<button onclick="showSetLLMKeyModal('${userId}')" style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.875rem;">設置 Key</button>`;
+            content += `</div>`;
             llmKeys.forEach(key => {
-                content += `<p style="margin: 4px 0;"><strong>${key.provider || '未知'}</strong> - 模型: ${key.model_name || '系統預設'}</p>`;
+                const providerName = (key.provider || '未知').toUpperCase();
+                content += `<div style="margin: 8px 0; padding: 8px; background: white; border-radius: 6px; border: 1px solid #d1d5db;">`;
+                content += `<div style="display: flex; justify-content: space-between; align-items: center;">`;
+                content += `<div>`;
+                content += `<p style="margin: 4px 0;"><strong>${providerName}</strong> - 模型: ${key.model_name || '系統預設'}</p>`;
                 if (key.created_at) {
                     const createdAt = new Date(key.created_at).toLocaleString('zh-TW', {
                         timeZone: 'Asia/Taipei',
@@ -1960,11 +1967,18 @@ async function viewUser(userId) {
                     });
                     content += `<p style="margin: 4px 0; font-size: 0.9rem; color: #64748b;">綁定時間: ${createdAt}</p>`;
                 }
+                content += `</div>`;
+                content += `<button onclick="deleteUserLLMKey('${userId}', '${key.provider || 'gemini'}')" style="padding: 4px 8px; background: #ef4444; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">刪除</button>`;
+                content += `</div>`;
+                content += `</div>`;
             });
             content += `</div>`;
         } else {
             content += `<div style="margin-top: 16px; padding: 12px; background: #fef2f2; border-radius: 8px;">`;
-            content += `<h4 style="margin-bottom: 8px;">🔑 LLM Key 綁定資訊</h4>`;
+            content += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">`;
+            content += `<h4 style="margin: 0;">🔑 LLM Key 綁定資訊</h4>`;
+            content += `<button onclick="showSetLLMKeyModal('${userId}')" style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.875rem;">設置 Key</button>`;
+            content += `</div>`;
             content += `<p style="color: #64748b;">尚未綁定 LLM Key</p>`;
             content += `</div>`;
         }
@@ -4665,6 +4679,9 @@ async function resetAdminPassword(adminId) {
 // 確保函數在全局作用域中可用
 window.promoteToAdmin = promoteToAdmin;
 window.upgradeToLifetime = upgradeToLifetime;
+window.showSetLLMKeyModal = showSetLLMKeyModal;
+window.confirmSetLLMKey = confirmSetLLMKey;
+window.deleteUserLLMKey = deleteUserLLMKey;
 window.deactivateAdmin = deactivateAdmin;
 window.activateAdmin = activateAdmin;
 window.resetAdminPassword = resetAdminPassword;
