@@ -379,17 +379,18 @@ body {
 }
 
 .btn-upgrade {
-    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.875rem;
-    font-weight: 600;
-    transition: all 0.2s;
-    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
-    margin-right: 0.5rem;
+    background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%) !important;
+    color: white !important;
+    border: none !important;
+    padding: 6px 12px !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    transition: all 0.2s !important;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3) !important;
+    margin-right: 0.5rem !important;
+    display: inline-block !important;
 }
 
 .btn-upgrade:hover {

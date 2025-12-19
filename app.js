@@ -1638,7 +1638,7 @@ async function loadUsers(page = 1) {
                         <span class="mobile-card-value">${formatDate(user.created_at)}</span>
                     </div>
                     <div class="mobile-card-actions">
-                        <button class="btn-action btn-upgrade" onclick="showUpgradePlanModal('${user.user_id}', '${userPlan}')" type="button" title="升級/修改方案">⬆️ 升級方案</button>
+                        <button class="btn-upgrade" onclick="showUpgradePlanModal('${user.user_id}', '${userPlan}')" type="button" title="升級/修改方案" style="margin-bottom: 8px; width: 100%;">⬆️ 升級方案</button>
                         <button class="btn-action ${isSubscribed ? 'btn-danger' : 'btn-success'}" 
                                 onclick="toggleSubscribe('${user.user_id}', ${!isSubscribed})" 
                                 type="button">
@@ -1691,7 +1691,7 @@ async function loadUsers(page = 1) {
                     <td>${user.conversation_count || 0}</td>
                     <td>${user.script_count || 0}</td>
                     <td>
-                        <button class="btn-action btn-upgrade" onclick="showUpgradePlanModal('${user.user_id}', '${userPlan}')" type="button" title="升級/修改方案">⬆️ 升級方案</button>
+                        <button class="btn-upgrade" onclick="showUpgradePlanModal('${user.user_id}', '${userPlan}')" type="button" title="升級/修改方案" style="margin-right: 6px;">⬆️ 升級方案</button>
                         <button class="btn-action btn-subscribe ${isSubscribed ? 'btn-danger' : 'btn-success'}" 
                                 onclick="toggleSubscribe('${user.user_id}', ${!isSubscribed})" 
                                 type="button">
