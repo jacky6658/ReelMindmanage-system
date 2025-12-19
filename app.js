@@ -1639,6 +1639,7 @@ async function loadUsers(page = 1) {
                     </div>
                     <div class="mobile-card-actions">
                         <button class="btn-upgrade" onclick="showUpgradePlanModal('${user.user_id}', '${userPlan}')" type="button" title="升級/修改方案" style="margin-bottom: 8px; width: 100%;">⬆️ 升級方案</button>
+                        <button class="btn-action" onclick="showAdjustUsageModal('${user.user_id}')" type="button" title="補充/調整用量" style="background: #f59e0b; color: white; margin-bottom: 8px; width: 100%;">➕ 補充用量</button>
                         <button class="btn-action ${isSubscribed ? 'btn-danger' : 'btn-success'}" 
                                 onclick="toggleSubscribe('${user.user_id}', ${!isSubscribed})" 
                                 type="button">
@@ -1692,6 +1693,7 @@ async function loadUsers(page = 1) {
                     <td>${user.script_count || 0}</td>
                     <td>
                         <button class="btn-upgrade" onclick="showUpgradePlanModal('${user.user_id}', '${userPlan}')" type="button" title="升級/修改方案" style="margin-right: 6px;">⬆️ 升級方案</button>
+                        <button class="btn-action" onclick="showAdjustUsageModal('${user.user_id}')" type="button" title="補充/調整用量" style="background: #f59e0b; color: white; margin-right: 6px;">➕ 補充用量</button>
                         <button class="btn-action btn-subscribe ${isSubscribed ? 'btn-danger' : 'btn-success'}" 
                                 onclick="toggleSubscribe('${user.user_id}', ${!isSubscribed})" 
                                 type="button">
@@ -2014,6 +2016,70 @@ async function viewUser(userId) {
             content += `<p><strong>狀態：</strong>${licenseData.status === 'active' ? '✅ 有效' : '❌ 已過期'}</p>`;
             content += `</div>`;
         }
+        
+        // 用量資訊
+        const usageData = userData.usage || {};
+        const planLimitsMap = {
+            'free': { daily: 10, monthly: 100, premium_monthly: 0 },
+            'lite': { daily: 20, monthly: 300, premium_monthly: 0 },
+            'pro': { daily: 300, monthly: 10000, premium_monthly: 2000 },
+            'max': { daily: 1000, monthly: 30000, premium_monthly: 5000 },
+            'vip': { daily: 1000, monthly: 30000, premium_monthly: 5000 }
+        };
+        const limits = planLimitsMap[userPlan] || planLimitsMap['free'];
+        const dailyUsed = usageData.daily_used || 0;
+        const monthlyUsed = usageData.monthly_used || 0;
+        const premiumMonthlyUsed = usageData.premium_monthly_used || 0;
+        
+        content += `<div style="margin-top: 16px; padding: 12px; background: #fff7ed; border-left: 4px solid #f59e0b; border-radius: 8px;">`;
+        content += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">`;
+        content += `<h4 style="margin: 0; color: #f59e0b;">📊 用量資訊</h4>`;
+        content += `<button onclick="showAdjustUsageModal('${userId}')" style="padding: 6px 12px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.875rem; font-weight: 600;">➕ 補充用量</button>`;
+        content += `</div>`;
+        content += `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px;">`;
+        
+        // 每日用量
+        const dailyPercent = limits.daily > 0 ? Math.min(100, (dailyUsed / limits.daily) * 100) : 0;
+        const dailyColor = dailyPercent >= 90 ? '#ef4444' : dailyPercent >= 70 ? '#f59e0b' : '#10b981';
+        content += `<div style="padding: 8px; background: #fef3c7; border-radius: 6px;">`;
+        content += `<p style="margin: 0; font-size: 0.875rem; color: #64748b;">每日用量</p>`;
+        content += `<p style="margin: 4px 0; font-size: 1.25rem; font-weight: 600; color: ${dailyColor};">${dailyUsed} / ${limits.daily}</p>`;
+        content += `<div style="width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">`;
+        content += `<div style="width: ${dailyPercent}%; height: 100%; background: ${dailyColor}; transition: width 0.3s;"></div>`;
+        content += `</div>`;
+        content += `</div>`;
+        
+        // 每月用量
+        const monthlyPercent = limits.monthly > 0 ? Math.min(100, (monthlyUsed / limits.monthly) * 100) : 0;
+        const monthlyColor = monthlyPercent >= 90 ? '#ef4444' : monthlyPercent >= 70 ? '#f59e0b' : '#10b981';
+        content += `<div style="padding: 8px; background: #fef3c7; border-radius: 6px;">`;
+        content += `<p style="margin: 0; font-size: 0.875rem; color: #64748b;">每月用量</p>`;
+        content += `<p style="margin: 4px 0; font-size: 1.25rem; font-weight: 600; color: ${monthlyColor};">${monthlyUsed} / ${limits.monthly}</p>`;
+        content += `<div style="width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">`;
+        content += `<div style="width: ${monthlyPercent}%; height: 100%; background: ${monthlyColor}; transition: width 0.3s;"></div>`;
+        content += `</div>`;
+        content += `</div>`;
+        
+        // Premium 每月用量（僅 Pro/VIP/MAX 顯示）
+        if (limits.premium_monthly > 0) {
+            const premiumPercent = Math.min(100, (premiumMonthlyUsed / limits.premium_monthly) * 100);
+            const premiumColor = premiumPercent >= 90 ? '#ef4444' : premiumPercent >= 70 ? '#f59e0b' : '#10b981';
+            content += `<div style="padding: 8px; background: #fef3c7; border-radius: 6px;">`;
+            content += `<p style="margin: 0; font-size: 0.875rem; color: #64748b;">Premium 每月</p>`;
+            content += `<p style="margin: 4px 0; font-size: 1.25rem; font-weight: 600; color: ${premiumColor};">${premiumMonthlyUsed} / ${limits.premium_monthly}</p>`;
+            content += `<div style="width: 100%; height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden;">`;
+            content += `<div style="width: ${premiumPercent}%; height: 100%; background: ${premiumColor}; transition: width 0.3s;"></div>`;
+            content += `</div>`;
+            content += `</div>`;
+        } else {
+            content += `<div style="padding: 8px; background: #f3f4f6; border-radius: 6px; opacity: 0.5;">`;
+            content += `<p style="margin: 0; font-size: 0.875rem; color: #64748b;">Premium 每月</p>`;
+            content += `<p style="margin: 4px 0; font-size: 1.25rem; font-weight: 600; color: #9ca3af;">不支援</p>`;
+            content += `</div>`;
+        }
+        
+        content += `</div>`;
+        content += `</div>`;
         
         // LLM Key 綁定資訊
         const llmKeys = userData.user_info?.llm_keys || [];
@@ -5004,10 +5070,100 @@ async function deleteUserLLMKey(userId, provider) {
     }
 }
 
+// ===== 用量調整功能 =====
+let currentAdjustUsageUserId = null;
+
+// 顯示調整用量彈窗
+function showAdjustUsageModal(userId) {
+    currentAdjustUsageUserId = userId;
+    
+    // 重置表單
+    document.getElementById('usage-daily-adjust').value = '';
+    document.getElementById('usage-monthly-adjust').value = '';
+    document.getElementById('usage-premium-adjust').value = '';
+    document.getElementById('usage-adjust-note').value = '';
+    
+    // 顯示彈窗
+    const modal = document.getElementById('adjust-usage-modal');
+    if (modal) {
+        modal.classList.add('active');
+    }
+}
+
+// 確認調整用量
+async function confirmAdjustUsage() {
+    if (!currentAdjustUsageUserId) {
+        showToast('錯誤：找不到用戶ID', 'error');
+        return;
+    }
+    
+    const dailyAdjust = parseInt(document.getElementById('usage-daily-adjust').value) || 0;
+    const monthlyAdjust = parseInt(document.getElementById('usage-monthly-adjust').value) || 0;
+    const premiumAdjust = parseInt(document.getElementById('usage-premium-adjust').value) || 0;
+    const note = document.getElementById('usage-adjust-note').value.trim();
+    
+    // 至少需要調整一個項目
+    if (dailyAdjust === 0 && monthlyAdjust === 0 && premiumAdjust === 0) {
+        showToast('請至少輸入一個調整數量', 'error');
+        return;
+    }
+    
+    // 確認對話
+    const adjustText = [];
+    if (dailyAdjust !== 0) adjustText.push(`每日：${dailyAdjust > 0 ? '+' : ''}${dailyAdjust}`);
+    if (monthlyAdjust !== 0) adjustText.push(`每月：${monthlyAdjust > 0 ? '+' : ''}${monthlyAdjust}`);
+    if (premiumAdjust !== 0) adjustText.push(`Premium：${premiumAdjust > 0 ? '+' : ''}${premiumAdjust}`);
+    
+    if (!confirm(`確定要調整此用戶的用量嗎？\n\n${adjustText.join('\n')}`)) {
+        return;
+    }
+    
+    try {
+        const requestBody = {
+            daily_adjust: dailyAdjust,
+            monthly_adjust: monthlyAdjust,
+            premium_monthly_adjust: premiumAdjust
+        };
+        
+        if (note) {
+            requestBody.admin_note = note;
+        }
+        
+        const response = await adminFetch(`${API_BASE_URL}/admin/users/${currentAdjustUsageUserId}/usage/adjust`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showToast('✅ 用量調整成功', 'success');
+            closeModal('adjust-usage-modal');
+            
+            // 如果用戶詳情彈窗已打開，重新載入用戶詳情
+            if (currentAdjustUsageUserId) {
+                viewUser(currentAdjustUsageUserId);
+            }
+            
+            currentAdjustUsageUserId = null;
+        } else {
+            const error = await response.json();
+            showToast(error.error || '調整失敗', 'error');
+        }
+    } catch (error) {
+        console.error('調整用量失敗:', error);
+        showToast('調整失敗，請稍後再試', 'error');
+    }
+}
+
 // 確保函數在全局作用域中可用
 window.promoteToAdmin = promoteToAdmin;
 window.upgradeToLifetime = upgradeToLifetime;
 window.showUpgradePlanModal = showUpgradePlanModal;
+window.showAdjustUsageModal = showAdjustUsageModal;
+window.confirmAdjustUsage = confirmAdjustUsage;
 window.showSetLLMKeyModal = showSetLLMKeyModal;
 window.confirmSetLLMKey = confirmSetLLMKey;
 window.deleteUserLLMKey = deleteUserLLMKey;

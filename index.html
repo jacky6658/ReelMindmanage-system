@@ -1863,6 +1863,58 @@
         </div>
     </div>
 
+    <!-- 補充用量彈窗 -->
+    <div class="modal" id="adjust-usage-modal" onclick="handleModalClick(event, 'adjust-usage-modal')">
+        <div class="modal-content" style="max-width: 500px;" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>補充/調整用量</h3>
+                <button class="modal-close" onclick="closeModal('adjust-usage-modal')">✕</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px; padding: 12px; background: #f0f9ff; border-radius: 8px;">
+                    <p style="margin: 0; font-size: 0.875rem; color: #64748b;">
+                        <strong>說明：</strong>當 AI 重複回覆或次數不當消耗時，可以手動補充用戶次數。<br>
+                        輸入正數表示補充，輸入負數表示減少。
+                    </p>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">每日用量調整 <span style="color: #9ca3af; font-weight: 400;">(選填)</span></label>
+                    <input type="number" id="usage-daily-adjust" 
+                           placeholder="例如：10（補充10次）或 -5（減少5次）"
+                           style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; box-sizing: border-box;">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">每月用量調整 <span style="color: #9ca3af; font-weight: 400;">(選填)</span></label>
+                    <input type="number" id="usage-monthly-adjust" 
+                           placeholder="例如：100（補充100次）或 -50（減少50次）"
+                           style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; box-sizing: border-box;">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Premium 每月用量調整 <span style="color: #9ca3af; font-weight: 400;">(選填)</span></label>
+                    <input type="number" id="usage-premium-adjust" 
+                           placeholder="例如：50（補充50次）或 -20（減少20次）"
+                           style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; box-sizing: border-box;">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">備註原因 <span style="color: #9ca3af; font-weight: 400;">(選填)</span></label>
+                    <textarea id="usage-adjust-note" 
+                              placeholder="請輸入調整原因，例如：AI 重複回覆、次數不當消耗、補償用戶等..."
+                              style="width: 100%; min-height: 80px; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 0.875rem; font-family: inherit; resize: vertical; box-sizing: border-box;"></textarea>
+                </div>
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button onclick="closeModal('adjust-usage-modal')" 
+                            style="padding: 10px 20px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                        取消
+                    </button>
+                    <button onclick="confirmAdjustUsage()" 
+                            style="padding: 10px 20px; background: #f59e0b; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        確認調整
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 右鍵選單 -->
     <div class="context-menu" id="context-menu">
         <div class="context-menu-item copy" onclick="copyCellText()">複製</div>
