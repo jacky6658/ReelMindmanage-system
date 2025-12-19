@@ -1653,11 +1653,24 @@ async function loadUsers(page = 1) {
                     '<span class="badge badge-success">已訂閱</span>' : 
                     '<span class="badge badge-danger">未訂閱</span>';
                 
+                // 方案顯示
+                const userPlan = user.plan || user.license_info?.plan || 'free';
+                const planDisplayMap = {
+                    'free': { name: 'Free', color: '#6b7280', bg: '#f3f4f6' },
+                    'lite': { name: 'Lite', color: '#3b82f6', bg: '#eff6ff' },
+                    'pro': { name: 'Pro', color: '#8b5cf6', bg: '#f3e8ff' },
+                    'max': { name: 'MAX', color: '#f59e0b', bg: '#fef3c7' },
+                    'vip': { name: 'VIP', color: '#ef4444', bg: '#fee2e2' }
+                };
+                const planInfo = planDisplayMap[userPlan] || planDisplayMap['free'];
+                const planBadge = `<span class="badge" style="background: ${planInfo.bg}; color: ${planInfo.color}; border: 1px solid ${planInfo.color}; font-weight: 600;">${planInfo.name}</span>`;
+                
                 return `
                 <tr>
                     <td>${user.user_id.substring(0, 12)}...</td>
                     <td>${user.email}</td>
                     <td>${user.name || '-'}</td>
+                    <td>${planBadge}</td>
                     <td id="subscribe-status-${user.user_id}">${subscribeStatus}</td>
                     <td>${formatDate(user.created_at)}</td>
                     <td>${user.conversation_count || 0}</td>
@@ -1895,13 +1908,40 @@ async function viewUser(userId) {
             content += `<p><strong>姓名：</strong>${userInfo.name}</p>`;
         }
         
+        // 方案資訊（優先顯示）
+        const userPlan = userData.plan || 'free';
+        const billingCycle = userData.billing_cycle || 'none';
+        const planDisplayMap = {
+            'free': { name: '免費版', color: '#6b7280', bg: '#f3f4f6' },
+            'lite': { name: 'Lite 輕量版', color: '#3b82f6', bg: '#eff6ff' },
+            'pro': { name: 'Pro 專業版', color: '#8b5cf6', bg: '#f3e8ff' },
+            'max': { name: 'MAX 最高階', color: '#f59e0b', bg: '#fef3c7' },
+            'vip': { name: 'VIP 授權方案', color: '#ef4444', bg: '#fee2e2' }
+        };
+        const planInfo = planDisplayMap[userPlan] || planDisplayMap['free'];
+        
+        content += `<div style="margin-top: 16px; padding: 12px; background: ${planInfo.bg}; border-left: 4px solid ${planInfo.color}; border-radius: 8px;">`;
+        content += `<h4 style="margin-bottom: 8px; color: ${planInfo.color};">📦 方案資訊</h4>`;
+        content += `<p><strong>當前方案：</strong><span style="color: ${planInfo.color}; font-weight: 600; font-size: 1.1rem;">${planInfo.name}</span></p>`;
+        if (billingCycle !== 'none') {
+            const cycleMap = {
+                'monthly': '月付',
+                'yearly': '年付',
+                'two_year': '雙年付'
+            };
+            content += `<p><strong>付款週期：</strong>${cycleMap[billingCycle] || billingCycle}</p>`;
+        }
+        content += `</div>`;
+        
         // 授權資訊
         if (licenseData && licenseData.tier !== 'none') {
             const expiresAt = licenseData.expires_at ? new Date(licenseData.expires_at).toLocaleString('zh-TW', {
                 timeZone: 'Asia/Taipei',
                 year: 'numeric',
                 month: '2-digit',
-                day: '2-digit'
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
             }) : '未知';
             
             // 訂閱來源顯示
@@ -1913,29 +1953,45 @@ async function viewUser(userId) {
                     'ecpay': '官網購買',
                     'admin': '管理員手動啟用',
                     'admin_manual': '管理員手動啟用',
-                    'admin_account': '管理員帳號'
+                    'admin_account': '管理員帳號',
+                    'webhook_license': '授權連結',
+                    'n8n': 'n8n 自動化'
                 };
                 sourceDisplay = sourceMap[licenseData.source] || licenseData.source;
             }
             
-            content += `<div style="margin-top: 16px; padding: 12px; background: #f0f9ff; border-radius: 8px;">`;
-            content += `<h4 style="margin-bottom: 8px;">🔑 授權資訊</h4>`;
-            // 只顯示 yearly、two_year 和 lifetime，過濾 monthly 和 personal
+            // 方案類型顯示
+            let productTierDisplay = '-';
+            if (licenseData.product_tier) {
+                const tierMap = {
+                    'lite': 'Lite',
+                    'pro': 'Pro',
+                    'max': 'MAX'
+                };
+                productTierDisplay = tierMap[licenseData.product_tier] || licenseData.product_tier;
+            } else if (licenseData.tier === 'vip' || licenseData.tier === 'lifetime') {
+                productTierDisplay = 'VIP（授權方案）';
+            }
+            
+            // 訂閱週期顯示
             let tierDisplay = '未訂閱';
             if (licenseData && licenseData.tier && licenseData.tier !== 'none') {
-                if (licenseData.tier === 'lifetime') {
-                    tierDisplay = '永久使用';
-                } else if (licenseData.tier === 'two_year') {
-                    tierDisplay = 'Creator Pro 雙年';
-                } else if (licenseData.tier === 'yearly') {
-                    tierDisplay = 'Script Lite 入門';
-                } else if (licenseData.tier === 'monthly' || licenseData.tier === 'personal') {
-                    tierDisplay = '需要升級（舊方案）';
-                }
+                const tierMap = {
+                    'monthly': '月付',
+                    'yearly': '年付',
+                    'two_year': '雙年付',
+                    'lifetime': '永久使用',
+                    'vip': 'VIP 授權'
+                };
+                tierDisplay = tierMap[licenseData.tier] || licenseData.tier;
             }
-            content += `<p><strong>等級：</strong>${tierDisplay}</p>`;
+            
+            content += `<div style="margin-top: 16px; padding: 12px; background: #f0f9ff; border-radius: 8px;">`;
+            content += `<h4 style="margin-bottom: 8px;">🔑 授權詳情</h4>`;
+            content += `<p><strong>產品方案：</strong>${productTierDisplay}</p>`;
+            content += `<p><strong>訂閱週期：</strong>${tierDisplay}</p>`;
             content += `<p><strong>席次：</strong>${licenseData.seats || 1}</p>`;
-            content += `<p><strong>訂閱來源：</strong><span style="color: #0f3dde; font-weight: 600;">${sourceDisplay}</span></p>`;
+            content += `<p><strong>授權來源：</strong><span style="color: #0f3dde; font-weight: 600;">${sourceDisplay}</span></p>`;
             content += `<p><strong>到期時間：</strong>${expiresAt}</p>`;
             content += `<p><strong>狀態：</strong>${licenseData.status === 'active' ? '✅ 有效' : '❌ 已過期'}</p>`;
             content += `</div>`;
@@ -3726,13 +3782,18 @@ async function toggleSubscribe(userId, subscribe) {
     } else {
         // 取消訂閱：直接執行
         if (confirm('確定要取消此用戶的訂閱嗎？')) {
-            await executeSubscriptionToggle(userId, false, null, null);
+            await executeSubscriptionToggle(userId, false, null, null, null, null);
         }
     }
 }
 
 function showSubscriptionModal(userId) {
-    // 重置表單（預設為年費）
+    // 重置表單（預設為 Pro 方案和年費）
+    const proRadio = document.querySelector('input[name="plan-type"][value="pro"]');
+    if (proRadio) {
+        proRadio.checked = true;
+    }
+    
     const yearlyRadio = document.querySelector('input[name="subscription-period"][value="yearly"]');
     if (yearlyRadio) {
         yearlyRadio.checked = true;
@@ -3752,6 +3813,44 @@ function showSubscriptionModal(userId) {
     const modal = document.getElementById('subscription-modal');
     if (modal) {
         modal.classList.add('active');
+    }
+}
+
+function updatePlanType(planType) {
+    // 更新選中的樣式
+    const liteLabel = document.getElementById('plan-lite-label');
+    const proLabel = document.getElementById('plan-pro-label');
+    const maxLabel = document.getElementById('plan-max-label');
+    const vipLabel = document.getElementById('plan-vip-label');
+    
+    // 重置所有樣式
+    const labels = [liteLabel, proLabel, maxLabel, vipLabel];
+    labels.forEach(label => {
+        if (label) {
+            label.style.borderColor = '#e5e7eb';
+            label.style.backgroundColor = 'transparent';
+        }
+    });
+    
+    // 設置選中樣式
+    let activeLabel;
+    if (planType === 'lite') activeLabel = liteLabel;
+    else if (planType === 'pro') activeLabel = proLabel;
+    else if (planType === 'max') activeLabel = maxLabel;
+    else if (planType === 'vip') activeLabel = vipLabel;
+    
+    if (activeLabel) {
+        activeLabel.style.borderColor = '#3b82f6';
+        activeLabel.style.backgroundColor = '#eff6ff';
+    }
+    
+    // VIP 方案時，自動選擇 lifetime 期限
+    if (planType === 'vip') {
+        const lifetimeRadio = document.querySelector('input[name="subscription-period"][value="lifetime"]');
+        if (lifetimeRadio) {
+            lifetimeRadio.checked = true;
+            updateSubscriptionPeriod('lifetime');
+        }
     }
 }
 
@@ -3791,6 +3890,7 @@ function handleModalClick(event, modalId) {
 
 // 初始化訂閱期限選擇樣式
 function initSubscriptionPeriodStyles() {
+    updatePlanType('pro');
     updateSubscriptionPeriod('yearly');
 }
 
@@ -3800,18 +3900,26 @@ async function confirmSubscription() {
         return;
     }
     
+    // 獲取選中的方案類型
+    const selectedPlanType = document.querySelector('input[name="plan-type"]:checked')?.value || 'pro';
+    
     // 獲取選中的訂閱期限
-    const selectedPeriod = document.querySelector('input[name="subscription-period"]:checked').value;
+    const selectedPeriod = document.querySelector('input[name="subscription-period"]:checked')?.value || 'yearly';
     let subscriptionDays;
+    let tier;
     
     if (selectedPeriod === 'monthly') {
         subscriptionDays = 30;
+        tier = 'monthly';
     } else if (selectedPeriod === 'yearly') {
         subscriptionDays = 365;
+        tier = 'yearly';
     } else if (selectedPeriod === 'lifetime') {
         subscriptionDays = 36500;
+        tier = 'lifetime';
     } else {
         subscriptionDays = 365; // 默認
+        tier = 'yearly';
     }
     
     // 獲取備註
@@ -3821,21 +3929,34 @@ async function confirmSubscription() {
     closeModal('subscription-modal');
     
     // 執行訂閱啟用
-    await executeSubscriptionToggle(currentSubscriptionUserId, true, subscriptionDays, note);
+    await executeSubscriptionToggle(currentSubscriptionUserId, true, subscriptionDays, note, selectedPlanType, tier);
     
     // 清除臨時變數
     currentSubscriptionUserId = null;
 }
 
-async function executeSubscriptionToggle(userId, subscribe, subscriptionDays, note) {
+async function executeSubscriptionToggle(userId, subscribe, subscriptionDays, note, planType, tier) {
     try {
         const requestBody = {
             is_subscribed: subscribe
         };
         
-        // 如果啟用訂閱，添加期限和備註
+        // 如果啟用訂閱，添加期限、方案類型和備註
         if (subscribe && subscriptionDays) {
             requestBody.subscription_days = subscriptionDays;
+            
+            // 設置方案類型（product_tier）
+            if (planType === 'vip') {
+                // VIP 方案：product_tier 為 null
+                requestBody.product_tier = null;
+                // VIP 方案使用 vip 或 lifetime tier
+                requestBody.tier = tier === 'lifetime' ? 'lifetime' : 'vip';
+            } else {
+                // 產品方案：lite/pro/max
+                requestBody.product_tier = planType; // lite/pro/max
+                requestBody.tier = tier; // monthly/yearly
+            }
+            
             if (note) {
                 requestBody.admin_note = note;
             }
@@ -3852,17 +3973,30 @@ async function executeSubscriptionToggle(userId, subscribe, subscriptionDays, no
         if (response.ok) {
             const result = await response.json();
             let periodText = '';
+            let planText = '';
             if (subscribe) {
+                // 方案類型文字
+                const planMap = {
+                    'lite': 'Lite',
+                    'pro': 'Pro',
+                    'max': 'MAX',
+                    'vip': 'VIP'
+                };
+                planText = planMap[planType] || '';
+                
+                // 期限文字
                 if (subscriptionDays === 30) periodText = '月費';
                 else if (subscriptionDays === 365) periodText = '年費';
                 else if (subscriptionDays >= 36500) periodText = '永久使用';
                 else periodText = `${subscriptionDays}天`;
             }
-            const message = subscribe ? `已啟用訂閱${periodText ? `（${periodText}）` : ''}` : '已取消訂閱';
+            const message = subscribe ? `已啟用${planText ? `${planText}方案` : '訂閱'}${periodText ? `（${periodText}）` : ''}` : '已取消訂閱';
             showToast(message, 'success');
             
             // 更新 UI
             updateSubscribeUI(userId, subscribe);
+            // 重新載入用戶列表以顯示更新後的方案
+            loadUsers(currentUsersPage);
         } else {
             const error = await response.json();
             showToast(error.error || '操作失敗', 'error');
@@ -4434,17 +4568,19 @@ async function promoteToAdmin(email) {
     }
 }
 
-// 升級為永久使用方案
+// 升級為永久使用方案（VIP 永久方案）
 async function upgradeToLifetime(userId) {
-    if (!confirm('確定要將此用戶升級為永久使用方案嗎？\n\n升級後用戶將擁有：\n- IP 人設規劃功能\n- 一鍵生成（無限制次數）\n- 創作者資料庫（PDF/CSV 下載）')) {
+    if (!confirm('確定要將此用戶升級為 VIP 永久使用方案嗎？\n\n升級後用戶將擁有：\n- VIP 方案權限（每日 1,000，每月 30,000，Premium 5,000）\n- IP 人設規劃功能\n- 一鍵生成（無限制次數）\n- 創作者資料庫（PDF/CSV 下載）\n- 永久有效')) {
         return;
     }
     
     try {
         const requestBody = {
             is_subscribed: true,
+            tier: 'lifetime',  // VIP 永久方案
+            product_tier: null,  // VIP 方案的 product_tier 為 null
             subscription_days: 36500,  // 永久使用
-            admin_note: '管理員手動升級為永久使用方案'
+            admin_note: '管理員手動升級為 VIP 永久使用方案'
         };
         
         const response = await adminFetch(`${API_BASE_URL}/admin/users/${userId}/subscription`, {
@@ -4456,9 +4592,9 @@ async function upgradeToLifetime(userId) {
         });
         
         if (response.ok) {
-            showToast('✅ 已升級為永久使用方案', 'success');
+            showToast('✅ 已升級為 VIP 永久使用方案', 'success');
             // 重新載入用戶列表
-            loadUsers();
+            loadUsers(currentUsersPage);
         } else {
             const error = await response.json();
             showToast(error.error || '升級失敗', 'error');
