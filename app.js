@@ -4812,6 +4812,162 @@ async function resetAdminPassword(adminId) {
     }
 }
 
+// ===== LLM Key 管理功能 =====
+let currentLLMKeyUserId = null;
+
+// 顯示設置 LLM Key 彈窗
+function showSetLLMKeyModal(userId) {
+    currentLLMKeyUserId = userId;
+    
+    // 創建或獲取彈窗
+    let modal = document.getElementById('llm-key-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'llm-key-modal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 500px;" onclick="event.stopPropagation()">
+                <div class="modal-header">
+                    <h3>設置 LLM Key</h3>
+                    <button class="modal-close" onclick="closeModal('llm-key-modal')">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">Provider <span style="color: #ef4444;">*</span></label>
+                        <select id="llm-key-provider" style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem;">
+                            <option value="gemini">Gemini</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">API Key <span style="color: #ef4444;">*</span></label>
+                        <input type="text" id="llm-key-value" 
+                               placeholder="請輸入 API Key"
+                               style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; box-sizing: border-box;">
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151;">模型名稱 <span style="color: #9ca3af; font-weight: 400;">(選填)</span></label>
+                        <input type="text" id="llm-key-model" 
+                               placeholder="例如: gpt-4, claude-3-opus 等"
+                               style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; box-sizing: border-box;">
+                    </div>
+                    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button onclick="closeModal('llm-key-modal')" 
+                                style="padding: 10px 20px; background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                            取消
+                        </button>
+                        <button onclick="confirmSetLLMKey()" 
+                                style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                            確認設置
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        modal.onclick = function(event) {
+            if (event.target.id === 'llm-key-modal') {
+                closeModal('llm-key-modal');
+            }
+        };
+        document.body.appendChild(modal);
+    }
+    
+    // 重置表單
+    document.getElementById('llm-key-provider').value = 'gemini';
+    document.getElementById('llm-key-value').value = '';
+    document.getElementById('llm-key-model').value = '';
+    
+    // 顯示彈窗
+    modal.classList.add('active');
+}
+
+// 確認設置 LLM Key
+async function confirmSetLLMKey() {
+    if (!currentLLMKeyUserId) {
+        showToast('錯誤：找不到用戶ID', 'error');
+        return;
+    }
+    
+    const provider = document.getElementById('llm-key-provider').value;
+    const apiKey = document.getElementById('llm-key-value').value.trim();
+    const modelName = document.getElementById('llm-key-model').value.trim();
+    
+    if (!apiKey) {
+        showToast('請輸入 API Key', 'error');
+        return;
+    }
+    
+    try {
+        const requestBody = {
+            provider: provider,
+            api_key: apiKey
+        };
+        
+        if (modelName) {
+            requestBody.model_name = modelName;
+        }
+        
+        const response = await adminFetch(`${API_BASE_URL}/admin/user/${currentLLMKeyUserId}/llm-key`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showToast('✅ LLM Key 設置成功', 'success');
+            closeModal('llm-key-modal');
+            
+            // 如果用戶詳情彈窗已打開，重新載入用戶詳情
+            if (currentLLMKeyUserId) {
+                viewUser(currentLLMKeyUserId);
+            }
+            
+            currentLLMKeyUserId = null;
+        } else {
+            const error = await response.json();
+            showToast(error.error || '設置失敗', 'error');
+        }
+    } catch (error) {
+        console.error('設置 LLM Key 失敗:', error);
+        showToast('設置失敗，請稍後再試', 'error');
+    }
+}
+
+// 刪除用戶 LLM Key
+async function deleteUserLLMKey(userId, provider) {
+    if (!confirm(`確定要刪除此用戶的 ${provider.toUpperCase()} LLM Key 嗎？`)) {
+        return;
+    }
+    
+    try {
+        const response = await adminFetch(`${API_BASE_URL}/admin/user/${userId}/llm-key`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ provider: provider })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            showToast('✅ LLM Key 已刪除', 'success');
+            
+            // 重新載入用戶詳情
+            viewUser(userId);
+        } else {
+            const error = await response.json();
+            showToast(error.error || '刪除失敗', 'error');
+        }
+    } catch (error) {
+        console.error('刪除 LLM Key 失敗:', error);
+        showToast('刪除失敗，請稍後再試', 'error');
+    }
+}
+
 // 確保函數在全局作用域中可用
 window.promoteToAdmin = promoteToAdmin;
 window.upgradeToLifetime = upgradeToLifetime;
