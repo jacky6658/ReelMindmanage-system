@@ -1600,6 +1600,17 @@ async function loadUsers(page = 1) {
                 const isSubscribed = user.is_subscribed !== false;
                 const subscribeStatus = isSubscribed ? '已訂閱' : '未訂閱';
                 
+                // 方案顯示
+                const userPlan = user.plan || user.license_info?.plan || 'free';
+                const planDisplayMap = {
+                    'free': { name: 'Free', color: '#6b7280' },
+                    'lite': { name: 'Lite', color: '#3b82f6' },
+                    'pro': { name: 'Pro', color: '#8b5cf6' },
+                    'max': { name: 'MAX', color: '#f59e0b' },
+                    'vip': { name: 'VIP', color: '#ef4444' }
+                };
+                const planInfo = planDisplayMap[userPlan] || planDisplayMap['free'];
+                
                 return `
                 <div class="mobile-card">
                     <div class="mobile-card-header">
@@ -1615,6 +1626,10 @@ async function loadUsers(page = 1) {
                         <span class="mobile-card-value">${user.email}</span>
                     </div>
                     <div class="mobile-card-row">
+                        <span class="mobile-card-label">方案</span>
+                        <span class="mobile-card-value" style="color: ${planInfo.color}; font-weight: 600;">${planInfo.name}</span>
+                    </div>
+                    <div class="mobile-card-row">
                         <span class="mobile-card-label">訂閱狀態</span>
                         <span class="mobile-card-value" id="mobile-subscribe-status-${user.user_id}">${subscribeStatus}</span>
                     </div>
@@ -1623,6 +1638,7 @@ async function loadUsers(page = 1) {
                         <span class="mobile-card-value">${formatDate(user.created_at)}</span>
                     </div>
                     <div class="mobile-card-actions">
+                        <button class="btn-action btn-upgrade" onclick="showUpgradePlanModal('${user.user_id}', '${userPlan}')" type="button" title="升級/修改方案">⬆️ 升級方案</button>
                         <button class="btn-action ${isSubscribed ? 'btn-danger' : 'btn-success'}" 
                                 onclick="toggleSubscribe('${user.user_id}', ${!isSubscribed})" 
                                 type="button">
@@ -1630,7 +1646,6 @@ async function loadUsers(page = 1) {
                         </button>
                         <button class="btn-action btn-view" onclick="viewUser('${user.user_id}')" type="button">查看詳情</button>
                         <button class="btn-action btn-promote" onclick="promoteToAdmin('${user.email}')" type="button" title="提升為管理員">⬆️ 提權</button>
-                        <button class="btn-action btn-lifetime" onclick="upgradeToLifetime('${user.user_id}')" type="button" title="升級為永久使用方案">⭐ 升級永久資格</button>
                     </div>
                 </div>
             `;
@@ -1676,6 +1691,7 @@ async function loadUsers(page = 1) {
                     <td>${user.conversation_count || 0}</td>
                     <td>${user.script_count || 0}</td>
                     <td>
+                        <button class="btn-action btn-upgrade" onclick="showUpgradePlanModal('${user.user_id}', '${userPlan}')" type="button" title="升級/修改方案">⬆️ 升級方案</button>
                         <button class="btn-action btn-subscribe ${isSubscribed ? 'btn-danger' : 'btn-success'}" 
                                 onclick="toggleSubscribe('${user.user_id}', ${!isSubscribed})" 
                                 type="button">
@@ -1683,7 +1699,6 @@ async function loadUsers(page = 1) {
                         </button>
                         <button class="btn-action btn-view" onclick="viewUser('${user.user_id}')" type="button">查看</button>
                         <button class="btn-action btn-promote" onclick="promoteToAdmin('${user.email}')" type="button" title="提升為管理員">⬆️ 提權</button>
-                        <button class="btn-action btn-lifetime" onclick="upgradeToLifetime('${user.user_id}')" type="button" title="升級為永久使用方案">⭐ 升級永久資格</button>
                     </td>
                 </tr>
             `;
@@ -1921,7 +1936,10 @@ async function viewUser(userId) {
         const planInfo = planDisplayMap[userPlan] || planDisplayMap['free'];
         
         content += `<div style="margin-top: 16px; padding: 12px; background: ${planInfo.bg}; border-left: 4px solid ${planInfo.color}; border-radius: 8px;">`;
-        content += `<h4 style="margin-bottom: 8px; color: ${planInfo.color};">📦 方案資訊</h4>`;
+        content += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">`;
+        content += `<h4 style="margin: 0; color: ${planInfo.color};">📦 方案資訊</h4>`;
+        content += `<button onclick="showUpgradePlanModal('${userId}', '${userPlan}')" style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.875rem; font-weight: 600;">⬆️ 升級方案</button>`;
+        content += `</div>`;
         content += `<p><strong>當前方案：</strong><span style="color: ${planInfo.color}; font-weight: 600; font-size: 1.1rem;">${planInfo.name}</span></p>`;
         if (billingCycle !== 'none') {
             const cycleMap = {
@@ -3773,11 +3791,29 @@ document.addEventListener('click', function(event) {
 // 儲存當前操作的用戶 ID
 let currentSubscriptionUserId = null;
 
+// 顯示升級方案彈窗（用於已訂閱用戶）
+function showUpgradePlanModal(userId, currentPlan) {
+    currentSubscriptionUserId = userId;
+    
+    // 設置彈窗標題
+    const modalTitle = document.querySelector('#subscription-modal .modal-header h3');
+    if (modalTitle) {
+        modalTitle.textContent = currentPlan === 'free' ? '啟用訂閱' : '升級方案';
+    }
+    
+    // 顯示訂閱設置彈窗
+    showSubscriptionModal(userId);
+}
+
 async function toggleSubscribe(userId, subscribe) {
     currentSubscriptionUserId = userId;
     
     if (subscribe) {
         // 啟用訂閱：顯示訂閱設置彈窗
+        const modalTitle = document.querySelector('#subscription-modal .modal-header h3');
+        if (modalTitle) {
+            modalTitle.textContent = '啟用訂閱';
+        }
         showSubscriptionModal(userId);
     } else {
         // 取消訂閱：直接執行
@@ -4971,6 +5007,7 @@ async function deleteUserLLMKey(userId, provider) {
 // 確保函數在全局作用域中可用
 window.promoteToAdmin = promoteToAdmin;
 window.upgradeToLifetime = upgradeToLifetime;
+window.showUpgradePlanModal = showUpgradePlanModal;
 window.showSetLLMKeyModal = showSetLLMKeyModal;
 window.confirmSetLLMKey = confirmSetLLMKey;
 window.deleteUserLLMKey = deleteUserLLMKey;
