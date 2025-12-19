@@ -8,14 +8,20 @@
 
 ### 二、目前擁有功能（重點）
 - ✅ 完整分頁：數據概覽、用戶、模式、對話、腳本、生成、數據分析、購買記錄、長期記憶
-- ✅ 用戶詳情彈窗：讀取授權與訂單
+- ✅ 用戶詳情彈窗：讀取授權與訂單、方案資訊、用量資訊
 - ✅ 多表 CSV 匯出（可擴增訂單匯出）
 - ✅ 長期記憶管理：查看所有用戶的對話記錄和會話詳情
 - ✅ 記憶統計功能：總記憶數、活躍用戶、今日新增、平均記憶/用戶
+- ✅ **方案管理**：升級/修改用戶方案（Lite/Pro/MAX/VIP）
+- ✅ **用量管理**：手動補充/調整用戶用量次數
+- ✅ **LLM Key 管理**：設置、查看、刪除用戶的 LLM API Key
+- ✅ **完整 RWD 支援**：所有功能頁面完美支援手機響應式，無橫向滾動
 
 ### 三、系統架構與資料流（簡）
 - 後台（本專案）→ 後端 Admin API → PostgreSQL
-- 關聯端點：`/api/admin/users`、`/api/admin/mode-statistics`、`/api/admin/conversations`、`/api/admin/scripts`、`/api/admin/orders`、`/api/admin/analytics-data`、`/api/admin/long-term-memory`、`/api/admin/memory-stats`
+- 關聯端點：
+  - 讀取：`/api/admin/users`、`/api/admin/mode-statistics`、`/api/admin/conversations`、`/api/admin/scripts`、`/api/admin/orders`、`/api/admin/analytics-data`、`/api/admin/long-term-memory`、`/api/admin/memory-stats`
+  - 管理：`PUT /api/admin/users/{user_id}/subscription`（方案管理）、`PUT /api/admin/users/{user_id}/usage/adjust`（用量調整）、`PUT /api/admin/users/{user_id}/llm-key`（LLM Key 管理）
 
 ### 四、尚未解決/待辦（Admin）
 - ⏳ 訂單 CSV 匯出與篩選（日期/狀態）
@@ -31,6 +37,10 @@
 - ✅ **長期記憶管理**：新增長期記憶分頁，可查看所有用戶的對話記錄
 - ✅ **記憶統計功能**：顯示總記憶數、活躍用戶、今日新增、平均記憶/用戶
 - ✅ **會話管理**：支援按對話類型篩選，查看會話詳情
+- ✅ **方案管理功能**：支援升級/修改用戶方案（Lite/Pro/MAX/VIP），選擇訂閱期限（月付/年付/永久）
+- ✅ **用量管理功能**：手動補充/調整用戶用量次數，支援每日、每月、Premium 每月用量調整
+- ✅ **LLM Key 管理**：設置、查看、刪除用戶的 LLM API Key（Gemini、OpenAI、Anthropic）
+- ✅ **完整 RWD 支援**：所有功能頁面完美支援手機響應式，無橫向滾動問題
 
 ---
 （以下為原 README 內容）
@@ -73,9 +83,15 @@
 - **最近活動**：即時顯示系統最近活動
 
 ### 2. 用戶管理 👥
-- **用戶列表**：顯示所有註冊用戶資訊
+- **用戶列表**：顯示所有註冊用戶資訊（包含方案資訊）
 - **搜尋功能**：支援用戶搜尋和篩選
 - **用戶詳情**：查看單個用戶完整資訊
+  - 方案資訊：當前方案、付款週期、授權詳情
+  - 用量資訊：每日用量、每月用量、Premium 每月用量（帶進度條）
+  - 訂單記錄：所有購買記錄
+  - LLM Key 綁定：查看和管理用戶的 LLM API Key
+- **方案管理**：升級/修改用戶方案（Lite/Pro/MAX/VIP），選擇訂閱期限
+- **用量管理**：手動補充/調整用戶用量次數
 - **數據統計**：顯示用戶對話數、腳本數等統計
 
 ### 3. 模式分析 🎯
@@ -176,8 +192,12 @@ const API_BASE_URL = 'https://aivideobackend.zeabur.app/api';
 - `GET /api/admin/statistics` - 獲取統計數據
 
 #### 用戶管理
-- `GET /api/admin/users` - 獲取所有用戶
-- `GET /api/admin/user/{user_id}/data` - 獲取用戶詳情
+- `GET /api/admin/users` - 獲取所有用戶（包含方案資訊）
+- `GET /api/admin/user/{user_id}/data` - 獲取用戶詳情（包含用量資訊）
+- `PUT /api/admin/users/{user_id}/subscription` - 更新用戶訂閱狀態和方案
+- `PUT /api/admin/users/{user_id}/usage/adjust` - 調整用戶用量（補充/減少）
+- `PUT /api/admin/users/{user_id}/llm-key` - 設置用戶 LLM Key
+- `DELETE /api/admin/users/{user_id}/llm-key/{provider}` - 刪除用戶 LLM Key
 
 #### 對話記錄
 - `GET /api/user/conversations/{user_id}` - 獲取對話記錄
@@ -203,12 +223,28 @@ const API_BASE_URL = 'https://aivideobackend.zeabur.app/api';
 
 **重要說明**：後台管理系統**不會修改**用戶數據，只進行**讀取和顯示**。
 
-## 📱 手機版支援
+## 📱 手機版支援（RWD 完整支援）
 
-- ✅ 手機網頁版完美支援
-- ✅ 響應式設計自動調整
-- ✅ 點擊左上角「☰」開啟側邊欄
-- ✅ 無左右滑動問題，所有數據正常顯示
+- ✅ **完美手機響應式**：所有功能頁面都支援手機版
+- ✅ **卡片式佈局**：手機版自動切換為卡片式佈局，更易閱讀
+- ✅ **無橫向滾動**：所有元素都在視口內，只支援上下滾動
+- ✅ **觸控優化**：按鈕大小符合觸控標準（最小 44x44px）
+- ✅ **側邊欄**：點擊左上角「☰」開啟側邊欄
+- ✅ **響應式圖表**：所有圖表自動調整大小
+- ✅ **響應式表格**：表格自動切換為卡片式顯示
+
+### 支援手機版的功能頁面
+- ✅ 數據概覽
+- ✅ 用戶管理（含方案管理、用量管理）
+- ✅ 模式分析
+- ✅ 對話記錄
+- ✅ 腳本管理
+- ✅ 生成記錄
+- ✅ 購買記錄
+- ✅ 數據分析
+- ✅ 長期記憶
+- ✅ 推薦記錄
+- ✅ IP人設規劃
 
 ## 🎨 設計說明
 
@@ -230,6 +266,19 @@ const API_BASE_URL = 'https://aivideobackend.zeabur.app/api';
 
 ## 📝 更新日誌
 
+### v1.2.0 (2025-12-19)
+- ✅ **方案管理功能**：升級/修改用戶方案（Lite/Pro/MAX/VIP），選擇訂閱期限（月付/年付/永久）
+- ✅ **用量管理功能**：手動補充/調整用戶用量次數，支援每日、每月、Premium 每月用量調整
+- ✅ **LLM Key 管理**：設置、查看、刪除用戶的 LLM API Key（Gemini、OpenAI、Anthropic）
+- ✅ **完整 RWD 支援**：所有功能頁面完美支援手機響應式，無橫向滾動問題
+- ✅ **用戶列表顯示方案**：在用戶列表中顯示當前方案資訊
+- ✅ **用量資訊顯示**：在用戶詳情中顯示用量資訊（帶進度條和顏色提示）
+
+### v1.1.0 (2025-XX-XX)
+- ✅ **長期記憶管理**：新增長期記憶分頁，可查看所有用戶的對話記錄
+- ✅ **記憶統計功能**：顯示總記憶數、活躍用戶、今日新增、平均記憶/用戶
+- ✅ **會話管理**：支援按對話類型篩選，查看會話詳情
+
 ### v1.0.0 (2025-01-XX)
 - ✅ 初始版本發布
 - ✅ 數據概覽功能
@@ -247,20 +296,50 @@ const API_BASE_URL = 'https://aivideobackend.zeabur.app/api';
 
 #### 新增功能詳情
 
-**1. 訂閱管理**
+**1. 方案管理功能（v1.2.0）**
+- 升級/修改用戶方案：支援 Lite、Pro、MAX、VIP 四種方案
+- 選擇訂閱期限：月付、年付、永久使用
+- 方案顯示：在用戶列表中顯示當前方案（帶顏色標籤）
+- 方案詳情：在用戶詳情中顯示完整方案資訊
+- 支援桌面版和手機版
+
+**2. 用量管理功能（v1.2.0）**
+- 手動補充用量：當 AI 重複回覆或次數不當消耗時，可以手動補充
+- 支援三種用量調整：
+  - 每日用量調整
+  - 每月用量調整
+  - Premium 每月用量調整
+- 用量顯示：在用戶詳情中顯示用量資訊（帶進度條和顏色提示）
+- 調整記錄：所有調整操作都會記錄在審計日誌中
+- 支援正數（補充）和負數（減少）
+
+**3. LLM Key 管理功能（v1.2.0）**
+- 設置 LLM Key：為用戶設置 Gemini、OpenAI、Anthropic 的 API Key
+- 查看綁定狀態：在用戶詳情中查看所有已綁定的 LLM Key
+- 刪除 LLM Key：刪除用戶的特定 LLM Key
+- 支援多個 Key：一個用戶可以綁定多個不同提供商的 Key
+
+**4. 完整 RWD 支援（v1.2.0）**
+- 所有功能頁面都支援手機響應式
+- 手機版自動切換為卡片式佈局
+- 無橫向滾動問題，所有元素都在視口內
+- 觸控優化，按鈕大小符合標準
+- 響應式圖表和表格
+
+**5. 訂閱管理（v1.0.0）**
 - 查看每個用戶的訂閱狀態（已訂閱/未訂閱）
 - 手動啟用或取消用戶訂閱
 - 即時更新 UI 顯示
 - 支援桌面版和手機版
 
-**2. CSV 匯出**
+**6. CSV 匯出（v1.0.0）**
 - 用戶管理：匯出用戶列表 CSV
 - 腳本管理：匯出腳本列表 CSV
 - 對話記錄：匯出對話記錄 CSV
 - 生成記錄：匯出生成記錄 CSV
 - 點擊按鈕自動下載檔案
 
-**3. 真實數據整合**
+**7. 真實數據整合（v1.0.0）**
 - 模式分析：使用真實統計數據
 - 生成記錄：顯示真實生成記錄
 - 數據分析：所有圖表使用真實數據
@@ -309,11 +388,18 @@ const API_BASE_URL = 'https://aivideobackend.zeabur.app/api';
 | Email | user_auth | email | 用戶郵箱 |
 | 姓名 | user_auth | name | 用戶姓名 |
 | 訂閱狀態 | user_auth | is_subscribed | 0=未訂閱, 1=已訂閱 |
+| **方案** | licenses + 計算邏輯 | plan | Free/Lite/Pro/MAX/VIP |
 | 註冊時間 | user_auth | created_at | 帳號創建時間 |
 | **對話數** | conversation_summaries | COUNT(*) WHERE user_id = ? | **該用戶的對話總數** |
 | **腳本數** | user_scripts | COUNT(*) WHERE user_id = ? | **該用戶的腳本總數** |
 
-**資料來源**：`GET /api/admin/users`
+**資料來源**：`GET /api/admin/users`（已包含方案資訊）
+
+**管理功能**：
+- **方案管理**：`PUT /api/admin/users/{user_id}/subscription` - 升級/修改用戶方案
+- **用量管理**：`PUT /api/admin/users/{user_id}/usage/adjust` - 調整用戶用量
+- **LLM Key 管理**：`PUT /api/admin/users/{user_id}/llm-key` - 設置 LLM Key
+- **用戶詳情**：`GET /api/admin/user/{user_id}/data` - 獲取完整用戶資訊（包含用量資訊）
 
 ---
 
