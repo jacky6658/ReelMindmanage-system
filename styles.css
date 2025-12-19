@@ -2,17 +2,22 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    max-width: 100%;
 }
 
 html {
     overflow-x: hidden;
     max-width: 100vw;
+    width: 100%;
 }
 
 body {
     overflow-x: hidden;
     max-width: 100vw;
+    width: 100%;
     position: relative;
+    margin: 0;
+    padding: 0;
 }
 
 :root {
@@ -603,15 +608,41 @@ body {
     word-wrap: break-word;
 }
 
-/* 防止水平滾動 */
+/* 防止水平滾動 - 全局規則 */
+* {
+    max-width: 100%;
+}
+
+html,
 body {
     overflow-x: hidden;
     width: 100%;
+    max-width: 100vw;
+    position: relative;
 }
 
 .dashboard-container {
     overflow-x: hidden;
     width: 100%;
+    max-width: 100vw;
+}
+
+.main-content {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+}
+
+/* 確保所有容器都不會橫向溢出 */
+.container,
+.content-section,
+.section,
+.tab-content,
+.tab-panel {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
 }
 
 /* 響應式設計 */
@@ -703,7 +734,9 @@ body {
     
     /* 手機版表格改為卡片式佈局 */
     .table-container {
-        overflow-x: visible;
+        overflow-x: hidden;
+        width: 100%;
+        max-width: 100%;
     }
     
     /* 在手機版隱藏表格標題 */
@@ -711,11 +744,28 @@ body {
         display: none !important;
     }
     
+    /* 確保表格不會橫向滾動 */
+    .data-table {
+        width: 100%;
+        max-width: 100%;
+        table-layout: fixed;
+    }
+    
+    .data-table td,
+    .data-table th {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        max-width: 0;
+    }
+    
     /* 手機版卡片容器 */
     .mobile-cards-container {
         display: flex;
         flex-direction: column;
         gap: 1rem;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
     }
     
     /* 自定義卡片樣式 */
@@ -725,6 +775,10 @@ body {
         border-radius: 0.75rem;
         padding: 1rem;
         box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow-x: hidden;
     }
     
     .mobile-card-header {
@@ -766,7 +820,9 @@ body {
         flex: 1;
         text-align: right;
         color: var(--text-color);
-        word-break: break-all;
+        word-break: break-word;
+        overflow-wrap: break-word;
+        max-width: 60%;
     }
     
     .mobile-card-actions {
@@ -924,6 +980,110 @@ body {
         min-width: 44px;
         padding: 0.5rem 0.75rem;
         font-size: 0.875rem;
+    }
+    
+    /* 確保所有容器都不會橫向滾動 */
+    .main-content {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+        box-sizing: border-box;
+    }
+    
+    .content-section {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+        box-sizing: border-box;
+    }
+    
+    .section-header {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        flex-wrap: wrap;
+    }
+    
+    .filters {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* 統計卡片在手機上 */
+    .stats-grid {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    .stat-card {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* 圖表容器 */
+    .chart-card,
+    .analytics-card {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow-x: hidden;
+    }
+    
+    /* 彈窗內容 */
+    .modal-content {
+        width: 95%;
+        max-width: 95%;
+        box-sizing: border-box;
+    }
+    
+    /* 分頁控制 */
+    .pagination {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    /* 標籤頁容器 */
+    .tabs-container {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+    }
+    
+    .tabs-container::-webkit-scrollbar {
+        height: 4px;
+    }
+    
+    .tabs-container::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 2px;
+    }
+    
+    /* 確保所有輸入框和選擇框都不會超出 */
+    input,
+    textarea,
+    select {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* 按鈕容器 */
+    .mobile-card-actions {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .mobile-card-actions .btn-action {
+        flex: 1 1 auto;
+        min-width: 0;
+        max-width: 100%;
     }
 }
 

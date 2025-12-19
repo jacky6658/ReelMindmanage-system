@@ -5292,15 +5292,99 @@ async function loadReferrals() {
         document.getElementById('referral-total-rewards').textContent = data.stats.total_rewards_granted || 0;
         document.getElementById('referral-total-days').textContent = data.stats.total_reward_days || 0;
         
-        // 更新表格
-        const tbody = document.getElementById('referrals-table-body');
-        if (!tbody) {
-            console.error('找不到 referrals-table-body 元素');
-            return;
-        }
+        // 檢測是否為手機版
+        const isMobile = window.innerWidth <= 768;
+        const tableContainer = document.querySelector('#referrals .table-container') || 
+                               document.querySelector('#tab-referrals-list .table-container');
         
-        if (data.records && data.records.length > 0) {
-            tbody.innerHTML = data.records.map(record => {
+        if (isMobile && tableContainer) {
+            // 手機版：卡片式佈局
+            setHTML(tableContainer, '');
+            const cardsContainer = document.createElement('div');
+            cardsContainer.className = 'mobile-cards-container';
+            
+            if (data.records && data.records.length > 0) {
+                cardsContainer.innerHTML = data.records.map(record => {
+                    const paymentStatus = record.has_paid_order 
+                        ? '<span class="badge badge-success">已付款</span>' 
+                        : '<span class="badge badge-danger">未付款</span>';
+                    const paymentAmount = record.has_paid_order 
+                        ? `NT$ ${record.total_paid_amount.toLocaleString()}` 
+                        : '-';
+                    const lastPaidDate = record.last_paid_date 
+                        ? formatDate(record.last_paid_date) 
+                        : '-';
+                    let rewardStatus = '';
+                    if (record.reward_granted) {
+                        rewardStatus = '<span class="badge badge-success">✓ 已發放</span>';
+                    } else if (record.has_paid_order) {
+                        rewardStatus = '<span class="badge badge-warning">待發放</span>';
+                    } else {
+                        rewardStatus = '<span class="badge badge-secondary">未達成</span>';
+                    }
+                    
+                    return `
+                    <div class="mobile-card">
+                        <div class="mobile-card-header">
+                            <span class="mobile-card-title">${record.referrer_name || '未知'}</span>
+                            ${paymentStatus}
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">推薦人</span>
+                            <span class="mobile-card-value">${record.referrer_email || '-'}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">被推薦人</span>
+                            <span class="mobile-card-value">${record.referred_name || '-'}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">被推薦人Email</span>
+                            <span class="mobile-card-value">${record.referred_email || '-'}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">推薦碼</span>
+                            <span class="mobile-card-value" style="font-family: monospace; font-size: 0.85rem;">${record.referral_code || '-'}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">推薦日期</span>
+                            <span class="mobile-card-value">${formatDate(record.referral_date)}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">付款金額</span>
+                            <span class="mobile-card-value">${paymentAmount}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">最後付款</span>
+                            <span class="mobile-card-value">${lastPaidDate}</span>
+                        </div>
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">獎勵狀態</span>
+                            <span class="mobile-card-value">${rewardStatus}</span>
+                        </div>
+                        ${record.reward_details ? `
+                        <div class="mobile-card-row">
+                            <span class="mobile-card-label">獎勵詳情</span>
+                            <span class="mobile-card-value">${record.reward_details}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    `;
+                }).join('');
+            } else {
+                cardsContainer.innerHTML = '<div style="text-align: center; padding: 2rem;">暫無推薦記錄</div>';
+            }
+            
+            tableContainer.appendChild(cardsContainer);
+        } else {
+            // 桌面版：表格佈局
+            const tbody = document.getElementById('referrals-table-body');
+            if (!tbody) {
+                console.error('找不到 referrals-table-body 元素');
+                return;
+            }
+            
+            if (data.records && data.records.length > 0) {
+                tbody.innerHTML = data.records.map(record => {
                 // 付款狀態顯示
                 const paymentStatus = record.has_paid_order 
                     ? '<span class="badge badge-success">已付款</span>' 
