@@ -5429,7 +5429,7 @@ async function loadReferrals() {
                     <td>${rewardDetails}</td>
                 </tr>
             `;
-                }).join('');
+            }).join('');
         } else {
             tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 40px; color: #6b7280;">暫無推薦記錄</td></tr>';
         }
